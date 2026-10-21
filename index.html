@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>自动化上新 · 上新策略配置</title>
+<style>
+  :root{
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --surface-2:#fafbfc;
+    --border:#e6e8ec;
+    --border-strong:#d4d8de;
+    --text:#1f2733;
+    --text-2:#5b6573;
+    --text-3:#8a94a3;
+    --accent:#0d9488;
+    --accent-d:#0b7d73;
+    --accent-soft:#e6f4f2;
+    --amber:#b45309; --amber-bg:#fef3c7;
+    --blue:#1d6fb8;  --blue-bg:#e1effa;
+    --green:#1a7f4b; --green-bg:#e3f5ea;
+    --gray:#5b6573;  --gray-bg:#eef0f3;
+    --red:#c0392b;   --red-bg:#fbe7e4;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+    --shadow-pop:0 8px 28px rgba(16,24,40,.14);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--text);
+    font-size:13px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  .app{display:flex;flex-direction:column;min-height:100vh;}
+
+  /* Header */
+  .app-header{
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:0 24px;
+    height:56px;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:30;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .logo{
+    width:28px;height:28px;border-radius:7px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;color:#fff;
+  }
+  .brand .title{font-size:15px;font-weight:650;letter-spacing:.2px;}
+  .brand .sub{font-size:12px;color:var(--text-3);font-weight:500;margin-left:2px;}
+  .header-meta{display:flex;align-items:center;gap:18px;color:var(--text-2);font-size:12px;}
+  .header-meta .dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;vertical-align:middle;}
+  .avatar{width:30px;height:30px;border-radius:50%;background:#dfe3ea;display:flex;align-items:center;justify-content:center;color:var(--text-2);font-weight:600;font-size:12px;}
+
+  /* Top tabs */
+  .top-tabs{
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    padding:0 24px;
+    display:flex;gap:4px;align-items:stretch;
+    position:sticky;top:56px;z-index:20;
+  }
+  .top-tab{
+    padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-2);
+    border:none;background:none;position:relative;border-bottom:2px solid transparent;
+  }
+  .top-tab:hover{color:var(--text);}
+  .top-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .top-tab .cnt{
+    margin-left:6px;font-size:11px;font-weight:600;color:var(--text-3);
+    background:var(--gray-bg);padding:1px 7px;border-radius:10px;
+  }
+  .top-tab.active .cnt{background:var(--accent-soft);color:var(--accent-d);}
+
+  .content{padding:18px 24px 60px;max-width:1480px;width:100%;margin:0 auto;}
+
+  /* Region tabs */
+  .section-label{font-size:12px;font-weight:600;color:var(--text-3);margin:6px 2px 8px;display:flex;align-items:center;gap:8px;}
+  .region-tabs{
+    display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;
+    scrollbar-width:thin;
+  }
+  .region-tabs::-webkit-scrollbar{height:6px;}
+  .region-tabs::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px;}
+  .region-tab{
+    flex:0 0 auto;
+    padding:8px 14px;border:1px solid var(--border);background:var(--surface);
+    border-radius:8px;font-size:12.5px;font-weight:600;color:var(--text-2);
+    display:flex;align-items:center;gap:8px;white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .region-tab:hover{border-color:var(--border-strong);color:var(--text);}
+  .region-tab.active{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-d);}
+  .region-tab .rcnt{
+    font-size:10.5px;font-weight:700;background:var(--gray-bg);color:var(--text-2);
+    border-radius:9px;padding:0 6px;min-width:18px;text-align:center;
+  }
+  .region-tab.active .rcnt{background:#fff;color:var(--accent-d);}
+
+  /* Status tabs */
+  .status-tabs{display:flex;gap:0;margin:14px 0 14px;border:1px solid var(--border);background:var(--surface);border-radius:10px;overflow:hidden;width:fit-content;box-shadow:var(--shadow);}
+  .status-tab{
+    padding:10px 18px;font-size:12.5px;font-weight:600;color:var(--text-2);
+    border:none;background:none;border-right:1px solid var(--border);
+    display:flex;align-items:center;gap:8px;position:relative;
+  }
+  .status-tab:last-child{border-right:none;}
+  .status-tab:hover{background:var(--surface-2);}
+  .status-tab.active{background:var(--surface-2);color:var(--text);}
+  .status-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);}
+  .status-tab .scnt{font-size:11px;font-weight:700;border-radius:9px;padding:0 7px;background:var(--gray-bg);color:var(--text-2);}
+  .status-tab .pip{width:7px;height:7px;border-radius:50%;}
+
+  /* Toolbar */
+  .toolbar{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;
+    box-shadow:var(--shadow);margin-bottom:12px;
+  }
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.2px;}
+  .fitem{display:flex;align-items:center;gap:8px;}
+  .fitem>label{font-size:12.5px;color:var(--text-2);font-weight:500;white-space:nowrap;}
+  .fitem .sep{color:var(--text-3);padding:0 2px;}
+  .actionbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .btn.danger-o{border-color:#f0c4be;color:var(--red);}
+  .btn.danger-o:hover{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+  .gear{width:15px;height:15px;flex:0 0 auto;}
+  .ms{position:relative;}
+  .ms-btn{
+    min-width:150px;height:34px;padding:0 10px;border:1px solid var(--border-strong);
+    background:var(--surface);border-radius:8px;font-size:12.5px;color:var(--text);
+    display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:500;
+    box-sizing:border-box;
+  }
+  .ms-btn svg{width:14px;height:14px;flex:0 0 auto;}
+  .ms-btn:hover{border-color:var(--accent);}
+  .ms-btn .chev{transition:transform .15s;color:var(--text-3);}
+  .ms-trigger{min-width:auto;width:auto;justify-content:flex-start;gap:6px;}
+  .ms.open .ms-btn .chev{transform:rotate(180deg);}
+  .ms-panel{
+    position:absolute;top:38px;left:0;z-index:40;min-width:190px;
+    background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;
+    box-shadow:var(--shadow-pop);padding:6px;display:none;max-height:280px;overflow:auto;
+  }
+  .ms.open .ms-panel{display:block;}
+  .ms-opt{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;font-size:12.5px;cursor:pointer;}
+  .ms-opt:hover{background:var(--surface-2);}
+  .ms-opt input{width:15px;height:15px;accent-color:var(--accent);}
+  .ms-foot{display:flex;justify-content:space-between;padding:6px 8px;border-top:1px solid var(--border);margin-top:4px;}
+  .ms-foot button{background:none;border:none;color:var(--accent-d);font-size:12px;font-weight:600;padding:4px;}
+
+  select.inp,input.inp{
+    height:34px;border:1px solid var(--border-strong);background:var(--surface);
+    border-radius:8px;font-size:12.5px;color:var(--text);padding:0 10px;font-family:inherit;
+  }
+  input.inp{min-width:200px;}
+  select.inp:focus,input.inp:focus,.ms-btn:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  .btn{
+    height:34px;padding:0 14px;border-radius:8px;font-size:12.5px;font-weight:600;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text);
+    display:inline-flex;align-items:center;gap:6px;transition:all .15s;
+  }
+  .btn:hover{border-color:var(--accent);color:var(--accent-d);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{background:var(--accent-d);color:#fff;}
+  .btn.danger{background:var(--red);border-color:var(--red);color:#fff;}
+  .btn.danger:hover{background:#a93226;color:#fff;}
+  .btn.ghost{border-color:transparent;background:transparent;color:var(--text-2);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .spacer{flex:1;}
+
+  /* Selection info */
+  .sel-info{font-size:12.5px;font-weight:600;color:var(--text-2);}
+  .sel-info b{font-size:14px;color:var(--accent-d);}
+
+  /* Table */
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:1180px;}
+  thead th{
+    background:var(--surface-2);text-align:left;font-size:11.5px;font-weight:650;color:var(--text-2);
+    padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;
+  }
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:12.5px;vertical-align:middle;white-space:nowrap;}
+  tbody tr:hover{background:#fbfcfd;}
+  tbody tr:last-child td{border-bottom:none;}
+  .mname{font-weight:650;color:var(--text);}
+  .mid{font-size:11px;color:var(--text-3);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+  .chk{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
+  .countries{display:flex;flex-wrap:wrap;gap:4px;}
+  .ctag{font-size:10.5px;background:var(--gray-bg);color:var(--text-2);border-radius:5px;padding:1px 6px;font-weight:600;}
+  .ctag.cur{background:var(--accent-soft);color:var(--accent-d);}
+  .badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;}
+  .badge .pip{width:6px;height:6px;border-radius:50%;}
+  .b-wait{color:var(--amber);background:var(--amber-bg);}
+  .b-deploy{color:var(--blue);background:var(--blue-bg);}
+  .b-done{color:var(--green);background:var(--green-bg);}
+  .b-off{color:var(--gray);background:var(--gray-bg);}
+  .b-reject{color:var(--red);background:var(--red-bg);}
+  .rev-safe{color:var(--green);font-weight:600;}
+  .rev-risk{color:var(--red);font-weight:600;}
+  .risk-tag{font-size:11px;color:var(--red);background:var(--red-bg);border-radius:5px;padding:1px 6px;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+  .risk-none{color:var(--text-3);}
+  .prio{font-weight:700;color:var(--text);}
+  .ops{display:flex;gap:6px;}
+  .op{
+    height:28px;padding:0 10px;border-radius:7px;font-size:11.5px;font-weight:600;
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text-2);
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .op:hover{border-color:var(--accent);color:var(--accent-d);}
+  .op.go{color:var(--green);border-color:#bfe6cc;}
+  .op.go:hover{background:var(--green-bg);}
+  .op.off{color:var(--red);border-color:#f0c4be;}
+  .op.off:hover{background:var(--red-bg);}
+  .op.rec{color:var(--accent-d);}
+  .op svg{width:14px;height:14px;}
+  .btn svg{width:16px;height:16px;flex:0 0 auto;}
+  .archived-note{color:var(--text-3);font-size:11.5px;}
+
+  /* Pagination */
+  .pager{display:flex;align-items:center;gap:14px;padding:12px 14px;border-top:1px solid var(--border);flex-wrap:wrap;}
+  .pager .info{font-size:12px;color:var(--text-2);}
+  .pager .pages{display:flex;gap:4px;margin-left:auto;}
+  .pg{min-width:32px;height:32px;border:1px solid var(--border-strong);background:var(--surface);border-radius:7px;font-size:12.5px;color:var(--text-2);font-weight:600;}
+  .pg:hover{border-color:var(--accent);color:var(--accent-d);}
+  .pg.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .pg:disabled{opacity:.4;cursor:not-allowed;}
+  .pager select.inp{height:32px;}
+
+  /* Records view */
+  .records-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .legend{background:#fff8ec;border:1px solid #f3e2bf;color:#8a6d2f;border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;}
+  .legend svg{width:15px;height:15px;flex:0 0 auto;margin-top:1px;}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;align-items:center;justify-content:center;z-index:100;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--surface);border-radius:14px;width:420px;max-width:92vw;box-shadow:var(--shadow-pop);overflow:hidden;}
+  .modal h3{margin:0;padding:18px 20px 4px;font-size:15px;}
+  .modal p{padding:0 20px 8px;color:var(--text-2);font-size:13px;margin:6px 0;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px 18px;}
+  .modal .warn-ico{width:40px;height:40px;border-radius:50%;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;margin:18px auto 4px;}
+  .modal .warn-ico svg{width:22px;height:22px;}
+
+  /* Toast */
+  .toasts{position:fixed;right:22px;bottom:22px;z-index:200;display:flex;flex-direction:column;gap:10px;}
+  .toast{background:#1f2733;color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow-pop);display:flex;align-items:center;gap:9px;animation:slidein .25s ease;max-width:360px;}
+  .toast .tico{width:18px;height:18px;flex:0 0 auto;}
+  .toast.ok .tico{color:#4ade80;}
+  .toast.info .tico{color:#5eead4;}
+  @keyframes slidein{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  .empty{padding:48px 20px;text-align:center;color:var(--text-3);font-size:13px;}
+  .empty svg{width:42px;height:42px;opacity:.4;margin-bottom:10px;}
+
+  .summary-cards{display:flex;gap:12px;margin:4px 0 16px;flex-wrap:wrap;}
+  .scard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;box-shadow:var(--shadow);min-width:130px;}
+  .scard .v{font-size:20px;font-weight:700;color:var(--text);}
+  .scard .l{font-size:11.5px;color:var(--text-3);margin-top:2px;}
+  @media (max-width:780px){.content{padding:14px;}.toolbar{gap:8px;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>
+      </div>
+      <span class="title">自动化上新</span>
+      <span class="sub">上新策略配置</span>
+    </div>
+    <div class="header-meta">
+      <span><span class="dot"></span>全球媒资调度</span>
+      <span id="globalStat"></span>
+      <div class="avatar">OP</div>
+    </div>
+  </header>
+
+  <nav class="top-tabs" id="topTabs"></nav>
+
+  <main class="content" id="content"></main>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* ---------- Utilities ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rng=mulberry32(20261021);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pick(a){return a[Math.floor(rng()*a.length)];}
+function randomId(){const c='0123456789abcdef';let s='';for(let i=0;i<24;i++)s+=c[Math.floor(rng()*16)];return s;}
+function randomDate(){const start=new Date('2024-01-01').getTime();const end=new Date('2024-09-30').getTime();return new Date(start+rng()*(end-start)).toISOString().slice(0,10);}
+function now(){const d=new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+function pastDateTime(){const d=new Date(Date.now()-Math.floor(rng()*60)*86400000-Math.floor(rng()*86400000));const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+
+/* ---------- Constants ---------- */
+const REGIONS=['US','AU','UK','IN','FR','DE','IT','BE','LATAM(除BR)','BR','ES','PH','VN','TH','ID','MENA','其它国家','LAE'];
+const LANGS=['英语','中文','德语','法语','西班牙语','葡萄牙语','意大利语','印地语','日语','韩语','泰语','越南语','印尼语','阿拉伯语','荷兰语','他加禄语'];
+const SUBS=['中文','英文','西班牙语','法语','德语','日语','葡萄牙语','无'];
+const CATS=['电影','剧集','纪录片','动画','综艺','短剧'];
+const PROVIDERS=['Destinations','One World Digital','Breaking Glass Pictures','BMG','Starlight Media','GlobalPix','CineWave','Mango TV'];
+const GENRES=['romance','drama','thriller','kids','animation','comedy','action','documentary','sci-fi'];
+const PAYTYPES=['免费','VIP','单片付费'];
+const OPERATORS=['张敏','李强','王芳','刘洋','陈静','赵磊'];
+const STATUS_PIP={'待打标':'var(--amber)','待部署':'var(--blue)','已部署':'var(--green)','已下线':'var(--gray)','不予上线':'var(--red)'};
+const REGION_LANG={'US':['英语'],'AU':['英语'],'UK':['英语'],'IN':['印地语','英语'],'FR':['法语'],'DE':['德语'],'IT':['意大利语'],'BE':['法语','荷兰语'],'LATAM(除BR)':['西班牙语','葡萄牙语'],'BR':['葡萄牙语'],'ES':['西班牙语'],'PH':['英语','他加禄语'],'VN':['越南语'],'TH':['泰语'],'ID':['印尼语'],'MENA':['阿拉伯语'],'其它国家':['英语'],'LAE':['西班牙语']};
+
+/* ---------- Data generation ---------- */
+const NAMES=['AGONY IN LOVE','Harambe','Girl Lost: A Hollywood Story','The Little Witch','Rally Caps','Dark Valley','Summer Romance','Midnight Echo','Crimson Tide','Lost Horizon','Neon Shadows','The Last Voyage','Silent Witness','Broken Chains','Eternal Flame','Urban Legend','Phantom Ride','Golden Hour','Cold Case','Dreamcatcher','Iron Will','Northern Lights','The Silent Sea','Paper Moon','Velvet Storm','Echoes of Time','The Forgotten','Shattered Glass','Wild Heart','Quiet Storm','Last Train Home','The Negotiator','Hidden Truth','Burning Sky','Frozen Lake','The Collector','Distant Stars','Rising Sun','Crimson Peak','The Wanderer','Nightfall','Solar Flare','The Archivist','Broken Mirror','Final Curtain','Glass House','The Outsider','Thunder Road','Whispering Pines','Coastal Drift','Fallen Star','The Long Way','Blue Monday','Scarlet Letter','Open Window','The Third Door','Maple Street','Saltwater','Year of the Dog','Concrete Jungle','The Messenger','Low Tide','Green Lake','Paper Boats','Stone Garden','The Briefcase','Night Owl','Redemption Rd','Frostbitten','The Cartographer','Hollow Point','Moonlit Bay','The Inheritance','Saffron Sky','Tidal Wave','The Lighthouse','Quiet Riot','Broken Arrow','Silver Lining','The Pendulum','Cargo 9','Warm Current','Driftwood','The Confession','Lantern Festival','The Salesman','Patchwork','The Veteran','Glass Canyon','Northern Star','The Interpreter','Slow Burn','The Orchid','Melting Snow','The Outpost','Closed Circuit','The Heirloom'];
+function weightedStatus(){const x=rng();if(x<0.45)return'待打标';if(x<0.75)return'待部署';if(x<0.95)return'已部署';return'已下线';}
+function langFor(r){const a=REGION_LANG[r]||['英语'];return a[Math.floor(rng()*a.length)];}
+function subFor(lang){const n=1+Math.floor(rng()*3);const arr=shuffle(SUBS).slice(0,n);if(rng()<0.3&&!arr.includes('无'))arr[0]='无';return arr.join(',');}
+
+const assets=[];
+for(let i=0;i<NAMES.length;i++){
+  const nReg=1+Math.floor(rng()*5);
+  const chosen=shuffle(REGIONS).slice(0,nReg);
+  const statusByRegion={};
+  chosen.forEach(r=>{statusByRegion[r]=weightedStatus();});
+  const primary=chosen[0];
+  assets.push({
+    id:randomId(),name:NAMES[i],countries:chosen,
+    category:pick(CATS),provider:pick(PROVIDERS),priority:1+Math.floor(rng()*5),
+    review:rng()<0.75?'安全':'敏感',
+    risk:rng()<0.7?'无':(rng()<0.5?'L2-中度色情低俗':'L1-轻度暴力'),
+    inboundDate:randomDate(),payType:pick(PAYTYPES),genre:pick(GENRES),
+    language:langFor(primary),subtitle:subFor(langFor(primary)),
+    statusByRegion
+  });
+}
+const records=[]; // {id,assetId,name,region,action:'下线'|'不予上线',fromStatus,time}
+assets.forEach(a=>{Object.entries(a.statusByRegion).forEach(([r,s])=>{
+  if(s==='已下线')records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'下线',fromStatus:'已部署',time:pastDateTime(),operator:pick(OPERATORS)});
+});});
+const assetById=id=>assets.find(a=>a.id===id);
+
+/* ---------- State ---------- */
+const state={
+  topTab:'pool',region:REGIONS[0],status:'待打标',
+  langFilter:new Set(),subFilter:new Set(),
+  fId:'',fTitle:'',fCountry:'',fCat:'',fGenre:'',fProvider:'',fReview:'',fPay:'',dateFrom:'',dateTo:'',
+  colVis:{id:true,status:true,countries:true,category:true,provider:true,priority:true,review:true,risk:true,inboundDate:true,payType:true,genre:true,language:true,subtitle:true},
+  pageSize:20,page:1,selected:new Set(),openMs:null,
+  recRegion:'',recStatus:'',recId:'',recTitle:'',recAvailCountry:'',recCat:'',recGenre:'',recProvider:'',recReview:'',recPay:'',
+  recDateFrom:'',recDateTo:'',recOperator:'',recOnlineDate:'',
+  recLangFilter:new Set(),recSubFilter:new Set(),recCountries:new Set(),
+  recColVis:{id:true,status:true,fromStatus:true,region:true,operator:true,time:true,countries:false,category:true,provider:true,review:false,inboundDate:false,payType:true,genre:true,language:true,subtitle:false}
+};
+
+/* ---------- Icons ---------- */
+const I={
+  go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
+  ban:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v10"/><path d="M8 11l4 4 4-4"/><path d="M5 19h14"/></svg>',
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-3"/></svg>',
+  info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>',
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/></svg>',
+  gear:'<svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+};
+
+/* ---------- Render: top tabs ---------- */
+function renderTopTabs(){
+  const total=REGIONS.length;
+  const recCnt=records.length;
+  document.getElementById('topTabs').innerHTML=
+    `<button class="top-tab ${state.topTab==='pool'?'active':''}" data-action="top" data-v="pool">上新池 <span class="cnt">${total} 区域</span></button>`+
+    `<button class="top-tab ${state.topTab==='records'?'active':''}" data-action="top" data-v="records">上线记录 <span class="cnt">${recCnt}</span></button>`;
+  document.getElementById('globalStat').textContent='媒资 '+assets.length+' · 上线记录 '+recCnt;
+}
+
+/* ---------- Render: pool view ---------- */
+function statusCount(r,s){return assets.filter(a=>a.statusByRegion[r]===s).length;}
+
+function renderPool(){
+  const r=state.region;
+  // region tabs
+  let regionTabs='<div class="section-label">按国家 / 地区分区（分区域独立上新池，单区域处理不影响其他区域同媒资状态）</div><div class="region-tabs">';
+  REGIONS.forEach(rg=>{
+    const cnt=assets.filter(a=>['待打标','待部署','已部署'].includes(a.statusByRegion[rg])).length;
+    regionTabs+=`<button class="region-tab ${rg===r?'active':''}" data-action="region" data-v="${rg}">${rg}<span class="rcnt">${cnt}</span></button>`;
+  });
+  regionTabs+='</div>';
+
+  // status tabs
+  const statuses=['待打标','待部署','已部署'];
+  let statusTabs='<div class="status-tabs">';
+  statuses.forEach(s=>{
+    const cnt=statusCount(r,s);
+    statusTabs+=`<button class="status-tab ${s===state.status?'active':''}" data-action="status" data-v="${s}"><span class="pip" style="background:${STATUS_PIP[s]}"></span>${s}<span class="scnt">${cnt}</span></button>`;
+  });
+  statusTabs+='</div>';
+
+  // filter form (layout per reference screenshot)
+  const fStatusSel=`<select class="inp" data-action="fStatus">
+    <option value="" ${state.status===''?'selected':''}>全部</option>
+    <option value="待打标" ${state.status==='待打标'?'selected':''}>待打标</option>
+    <option value="待部署" ${state.status==='待部署'?'selected':''}>待部署</option>
+    <option value="已部署" ${state.status==='已部署'?'selected':''}>已部署</option>
+  </select>`;
+  const toolbar=`
+  <div class="toolbar">
+    <div class="fitem"><label>媒资ID</label><input class="inp" style="width:190px" data-action="fId" placeholder="请输入媒资ID/BundleID" value="${state.fId}"></div>
+    <div class="fitem"><label>媒资标题</label><input class="inp" style="width:190px" data-action="fTitle" placeholder="请输入媒资标题" value="${state.fTitle}"></div>
+    <div class="fitem"><label>部署状态</label>${fStatusSel}</div>
+    <div class="fitem"><label>可用国家</label><select class="inp" data-action="fCountry">${optHTML(REGIONS,state.fCountry,'全部')}</select></div>
+    <div class="fitem"><label>分类</label><select class="inp" data-action="fCat">${optHTML(CATS,state.fCat,'全部')}</select></div>
+    <div class="fitem"><label>类型</label><select class="inp" data-action="fGenre">${optHTML(GENRES,state.fGenre,'请选择类型')}</select></div>
+    <div class="fitem"><label>内容商</label><select class="inp" data-action="fProvider">${optHTML(PROVIDERS,state.fProvider,'全部')}</select></div>
+    <div class="fitem"><label>审核结果</label><select class="inp" data-action="fReview">${optHTML(['安全','敏感'],state.fReview,'全部')}</select></div>
+    <div class="fitem"><label>入库时间</label><input type="date" class="inp" data-action="fDateFrom" value="${state.dateFrom}"><span class="sep">~</span><input type="date" class="inp" data-action="fDateTo" value="${state.dateTo}"></div>
+    <div class="fitem"><label>付费类型</label><select class="inp" data-action="fPay">${optHTML(PAYTYPES,state.fPay,'全部')}</select></div>
+    <div class="fitem"><label>语言</label>${msHTML('lang',state.langFilter,'全部',LANGS)}</div>
+    <div class="fitem"><label>字幕语言</label>${msHTML('sub',state.subFilter,'全部',SUBS)}</div>
+    <div class="fitem"><button class="btn primary" data-action="query">查 询</button><button class="btn" data-action="reset">重 置</button></div>
+  </div>`;
+
+  // action bar (per reference screenshot + 批量不予上线)
+  const actionbar=`<div class="actionbar">
+    <span class="sel-info">已选 <b id="selCount">${state.selected.size}</b> 项</span>
+    <button class="btn primary" data-action="batchGo">批量上线</button>
+    <button class="btn danger-o" data-action="batchReject">批量不予上线</button>
+    <button class="btn" data-action="addMedia">添加媒资</button>
+    <span class="archived-note">批量不予上线将媒资移出上新池并归档至【上线记录】</span>
+    <div class="spacer"></div>
+    ${colConfigHTML('poolCols',state.colVis)}
+  </div>`;
+
+  const {rows,total}=getRows();
+  const table=renderTable(rows,total);
+
+  document.getElementById('content').innerHTML=regionTabs+statusTabs+toolbar+actionbar+table;
+}
+
+function msHTML(key,set,placeholder,all){
+  let opts='';
+  all.forEach(v=>{const on=set.has(v);opts+=`<label class="ms-opt"><input type="checkbox" data-ms="${key}" value="${v}" ${on?'checked':''}>${v}</label>`;});
+  const summary=set.size?`已选 ${set.size} 项`:placeholder;
+  const open=state.openMs===key?'open':'';
+  return `<div class="ms ${open}" data-mskey="${key}"><button class="ms-btn" data-action="msToggle" data-mskey="${key}">${summary}<span class="chev">▾</span></button><div class="ms-panel">${opts}<div class="ms-foot"><button data-action="msClear" data-mskey="${key}">清空</button><button data-action="msDone" data-mskey="${key}">完成</button></div></div></div>`;
+}
+function optHTML(arr,val,all){let h=`<option value="">${all}</option>`;arr.forEach(v=>{h+=`<option value="${v}" ${v===val?'selected':''}>${v}</option>`;});return h;}
+
+const COLDEFS=[['id','媒资信息'],['status','部署状态'],['countries','可用国家'],['category','分类'],['provider','内容商'],['priority','优先级'],['review','审核结果'],['risk','风险标签'],['inboundDate','入库时间'],['payType','付费类型'],['genre','类型'],['language','语言'],['subtitle','字幕语言']];
+const REC_COLDEFS=[['id','媒资信息'],['status','上线状态'],['fromStatus','原状态'],['region','上线国家/地区'],['operator','上线人'],['time','上线时间'],['countries','可用国家'],['category','分类'],['provider','内容商'],['review','审核结果'],['inboundDate','入库时间'],['payType','付费类型'],['genre','类型'],['language','语言'],['subtitle','字幕语言']];
+function colConfigHTML(mskey,vis){
+  const defs=mskey==='poolCols'?COLDEFS:REC_COLDEFS;
+  let opts='';
+  defs.forEach(([k,label])=>{opts+=`<label class="ms-opt"><input type="checkbox" data-ms="${mskey}" value="${k}" ${vis[k]?'checked':''}>${label}</label>`;});
+  const open=state.openMs===mskey?'open':'';
+  return `<div class="ms ${open}" data-mskey="${mskey}"><button class="ms-btn ms-trigger" data-action="msToggle" data-mskey="${mskey}">${I.gear}<span>列展示配置</span></button><div class="ms-panel" style="left:auto;right:0">${opts}</div></div>`;
+}
+
+/* ---------- Data: rows + filter + pagination ---------- */
+function getRows(){
+  const r=state.region;
+  const POOL=['待打标','待部署','已部署'];
+  let rows=assets.filter(a=>state.status===''?POOL.includes(a.statusByRegion[r]):a.statusByRegion[r]===state.status)
+    .map(a=>({asset:a,region:r,status:a.statusByRegion[r]}));
+  rows=rows.filter(row=>{
+    const a=row.asset;if(!a)return false;
+    if(state.fId && !a.id.toLowerCase().includes(state.fId.toLowerCase()))return false;
+    if(state.fTitle && !a.name.toLowerCase().includes(state.fTitle.toLowerCase()))return false;
+    if(state.fCountry && !a.countries.includes(state.fCountry))return false;
+    if(state.fCat && a.category!==state.fCat)return false;
+    if(state.fGenre && a.genre!==state.fGenre)return false;
+    if(state.fProvider && a.provider!==state.fProvider)return false;
+    if(state.fReview && a.review!==state.fReview)return false;
+    if(state.fPay && a.payType!==state.fPay)return false;
+    if(state.dateFrom && a.inboundDate<state.dateFrom)return false;
+    if(state.dateTo && a.inboundDate>state.dateTo)return false;
+    if(state.langFilter.size&&!state.langFilter.has(a.language))return false;
+    if(state.subFilter.size){const subs=(a.subtitle||'').split(',').map(s=>s.trim());if(!subs.some(s=>state.subFilter.has(s)))return false;}
+    return true;
+  });
+  const total=rows.length;
+  const ps=state.pageSize;const pages=Math.max(1,Math.ceil(total/ps));
+  if(state.page>pages)state.page=pages;
+  const start=(state.page-1)*ps;
+  return {rows:rows.slice(start,start+ps),total,pages};
+}
+
+function badge(s){return `<span class="badge b-${s==='待打标'?'wait':s==='待部署'?'deploy':s==='已部署'?'done':s==='已下线'?'off':'reject'}"><span class="pip" style="background:${STATUS_PIP[s]}"></span>${s}</span>`;}
+
+function cellHTML(k,a,row){
+  const r=row.region;
+  switch(k){
+    case 'id':return `<div class="mname">${a.name}</div><div class="mid">${a.id}</div>`;
+    case 'status':return badge(row.status);
+    case 'countries':return `<div class="countries">${a.countries.map(c=>`<span class="ctag ${c===r?'cur':''}">${c}</span>`).join('')}</div>`;
+    case 'category':return a.category;
+    case 'provider':return a.provider;
+    case 'priority':return `<span class="prio">${a.priority}</span>`;
+    case 'review':return `<span class="${a.review==='安全'?'rev-safe':'rev-risk'}">${a.review}</span>`;
+    case 'risk':return a.risk==='无'?'<span class="risk-none">无</span>':`<span class="risk-tag" title="${a.risk}">${a.risk}</span>`;
+    case 'inboundDate':return a.inboundDate;
+    case 'payType':return `<span class="ctag">${a.payType}</span>`;
+    case 'genre':return a.genre;
+    case 'language':return a.language;
+    case 'subtitle':return a.subtitle;
+    default:return '';
+  }
+}
+
+function renderTable(rows,total){
+  const head=['<th style="width:34px"><input type="checkbox" class="chk" data-action="selAll"></th>'];
+  COLDEFS.forEach(([k,label])=>{if(state.colVis[k])head.push(`<th>${label}</th>`);});
+  head.push('<th style="width:170px">操作</th>');
+  const colspan=head.length;
+  let body='';
+  if(!rows.length){
+    body=`<tr><td colspan="${colspan}"><div class="empty">${I.empty}<div>当前筛选条件下暂无媒资</div></div></td></tr>`;
+  }else{
+    rows.forEach(row=>{
+      const a=row.asset;const r=row.region;
+      const sel=state.selected.has(a.id)?'checked':'';
+      let ops='';
+      if(row.status==='待打标'||row.status==='待部署'){
+        ops=`<button class="op go" data-action="go" data-id="${a.id}" data-r="${r}">${I.go}上线</button><button class="op off" data-action="reject" data-id="${a.id}" data-r="${r}">${I.ban}不予上线</button>`;
+      }else if(row.status==='已部署'){
+        ops=`<button class="op off" data-action="down" data-id="${a.id}" data-r="${r}">${I.down}下线</button><button class="op off" data-action="reject" data-id="${a.id}" data-r="${r}">${I.ban}不予上线</button>`;
+      }
+      let tds=`<td><input type="checkbox" class="chk" data-action="sel" data-id="${a.id}" ${sel}></td>`;
+      COLDEFS.forEach(([k])=>{if(state.colVis[k])tds+=`<td>${cellHTML(k,a,row)}</td>`;});
+      tds+=`<td><div class="ops">${ops}</div></td>`;
+      body+=`<tr>${tds}</tr>`;
+    });
+  }
+  const pager=renderPager(total);
+  return `<div class="table-card"><div class="table-wrap"><table><thead><tr>${head.join('')}</tr></thead><tbody>${body}</tbody></table></div>${pager}</div>`;
+}
+
+function renderPager(total){
+  const ps=state.pageSize;const pages=Math.max(1,Math.ceil(total/ps));const p=state.page;
+  let pg=`<button class="pg" data-action="pg" data-v="${p-1}" ${p<=1?'disabled':''}>‹</button>`;
+  const win=[];const s=Math.max(1,p-2),e=Math.min(pages,p+2);
+  if(s>1){win.push(1);if(s>2)win.push('…');}
+  for(let i=s;i<=e;i++)win.push(i);
+  if(e<pages){if(e<pages-1)win.push('…');win.push(pages);}
+  win.forEach(v=>{if(v==='…')pg+=`<span class="pg" style="border:none;background:none">…</span>`;else pg+=`<button class="pg ${v===p?'active':''}" data-action="pg" data-v="${v}">${v}</button>`;});
+  pg+=`<button class="pg" data-action="pg" data-v="${p+1}" ${p>=pages?'disabled':''}>›</button>`;
+  return `<div class="pager">
+    <span class="info">共 <b>${total}</b> 条 · 每页</span>
+    <select class="inp" data-action="pageSize">${[10,20,50,100].map(n=>`<option value="${n}" ${n===ps?'selected':''}>${n} 条/页</option>`).join('')}</select>
+    <div class="pages">${pg}</div>
+  </div>`;
+}
+
+/* ---------- Render: records view ---------- */
+function getRecRows(){
+  let rows=records.slice();
+  if(state.recRegion)rows=rows.filter(x=>x.region===state.recRegion);
+  if(state.recStatus)rows=rows.filter(x=>x.action===state.recStatus);
+  if(state.recCountries.size)rows=rows.filter(x=>state.recCountries.has(x.region));
+  rows=rows.filter(x=>{
+    const a=assetById(x.assetId);
+    if(state.recId && !x.assetId.toLowerCase().includes(state.recId.toLowerCase()))return false;
+    if(state.recTitle && !x.name.toLowerCase().includes(state.recTitle.toLowerCase()))return false;
+    if(state.recAvailCountry && !(a&&a.countries.includes(state.recAvailCountry)))return false;
+    if(state.recCat && (!a||a.category!==state.recCat))return false;
+    if(state.recGenre && (!a||a.genre!==state.recGenre))return false;
+    if(state.recProvider && (!a||a.provider!==state.recProvider))return false;
+    if(state.recReview && (!a||a.review!==state.recReview))return false;
+    if(state.recPay && (!a||a.payType!==state.recPay))return false;
+    if(state.recDateFrom && (!a||a.inboundDate<state.recDateFrom))return false;
+    if(state.recDateTo && (!a||a.inboundDate>state.recDateTo))return false;
+    if(state.recOperator && !(x.operator||'').includes(state.recOperator))return false;
+    if(state.recOnlineDate && x.time.slice(0,10)!==state.recOnlineDate)return false;
+    if(state.recLangFilter.size && (!a||!state.recLangFilter.has(a.language)))return false;
+    if(state.recSubFilter.size){const subs=a?(a.subtitle||'').split(',').map(s=>s.trim()):[];if(!subs.some(s=>state.recSubFilter.has(s)))return false;}
+    return true;
+  });
+  rows.sort((a,b)=>b.time<a.time?-1:1);
+  return rows;
+}
+
+function recCellHTML(k,rec){
+  const a=assetById(rec.assetId);
+  switch(k){
+    case 'id':return `<div class="mname">${rec.name}</div><div class="mid">${rec.assetId}</div>`;
+    case 'status':return rec.action==='下线'?badge('已下线'):`<span class="badge b-reject"><span class="pip" style="background:${STATUS_PIP['不予上线']}"></span>不予上线</span>`;
+    case 'fromStatus':return badge(rec.fromStatus);
+    case 'region':return `<span class="ctag cur">${rec.region}</span>`;
+    case 'operator':return rec.operator||'-';
+    case 'time':return rec.time;
+    case 'countries':return a?`<div class="countries">${a.countries.map(c=>`<span class="ctag ${c===rec.region?'cur':''}">${c}</span>`).join('')}</div>`:'-';
+    case 'category':return a?a.category:'-';
+    case 'provider':return a?a.provider:'-';
+    case 'review':return a?`<span class="${a.review==='安全'?'rev-safe':'rev-risk'}">${a.review}</span>`:'-';
+    case 'inboundDate':return a?a.inboundDate:'-';
+    case 'payType':return a?`<span class="ctag">${a.payType}</span>`:'-';
+    case 'genre':return a?a.genre:'-';
+    case 'language':return a?a.language:'-';
+    case 'subtitle':return a?a.subtitle:'-';
+    default:return '';
+  }
+}
+
+function renderRecords(){
+  // region partition tabs (same as pool) + 全部 overview
+  let regionTabs='<div class="section-label">按国家 / 地区分区查看下线 / 不予上线归档记录</div><div class="region-tabs">';
+  regionTabs+=`<button class="region-tab ${state.recRegion===''?'active':''}" data-action="recRegionTab" data-v="">全部<span class="rcnt">${records.length}</span></button>`;
+  REGIONS.forEach(rg=>{
+    const cnt=records.filter(x=>x.region===rg).length;
+    regionTabs+=`<button class="region-tab ${state.recRegion===rg?'active':''}" data-action="recRegionTab" data-v="${rg}">${rg}<span class="rcnt">${cnt}</span></button>`;
+  });
+  regionTabs+='</div>';
+
+  let html=regionTabs;
+  html+=`<div class="legend">${I.info}<div>媒资执行<b>下线</b>或<b>不予上线</b>后，会从对应区域上新池自动移除并归档至本记录；<b>已部署</b>状态媒资在原池中保留，支持跨栏目上线。可通过【恢复】重新纳回上新池。</div></div>`;
+
+  // filter form (layout per reference screenshot)
+  const fStatusSel=`<select class="inp" data-action="recStatus">
+    <option value="" ${state.recStatus===''?'selected':''}>全部</option>
+    <option value="下线" ${state.recStatus==='下线'?'selected':''}>已下线</option>
+    <option value="不予上线" ${state.recStatus==='不予上线'?'selected':''}>不予上线</option>
+  </select>`;
+  html+=`<div class="toolbar">
+    <div class="fitem"><label>媒资ID</label><input class="inp" style="width:180px" data-action="recId" placeholder="请输入媒资ID/BundleID" value="${state.recId}"></div>
+    <div class="fitem"><label>媒资标题</label><input class="inp" style="width:180px" data-action="recTitle" placeholder="请输入媒资标题" value="${state.recTitle}"></div>
+    <div class="fitem"><label>上线状态</label>${fStatusSel}</div>
+    <div class="fitem"><label>可用国家</label><select class="inp" data-action="recAvailCountry">${optHTML(REGIONS,state.recAvailCountry,'全部')}</select></div>
+    <div class="fitem"><label>上线国家</label>${msHTML('recCountries',state.recCountries,'全部（支持多选）',REGIONS)}</div>
+    <div class="fitem"><label>分类</label><select class="inp" data-action="recCat">${optHTML(CATS,state.recCat,'全部')}</select></div>
+    <div class="fitem"><label>类型</label><select class="inp" data-action="recGenre">${optHTML(GENRES,state.recGenre,'请选择类型')}</select></div>
+    <div class="fitem"><label>内容商</label><select class="inp" data-action="recProvider">${optHTML(PROVIDERS,state.recProvider,'全部')}</select></div>
+    <div class="fitem"><label>审核结果</label><select class="inp" data-action="recReview">${optHTML(['安全','敏感'],state.recReview,'全部')}</select></div>
+    <div class="fitem"><label>入库时间</label><input type="date" class="inp" data-action="recDateFrom" value="${state.recDateFrom}"><span class="sep">~</span><input type="date" class="inp" data-action="recDateTo" value="${state.recDateTo}"></div>
+    <div class="fitem"><label>上线人</label><input class="inp" style="width:150px" data-action="recOperator" placeholder="请输入上线人" value="${state.recOperator}"></div>
+    <div class="fitem"><label>上线时间</label><input type="date" class="inp" data-action="recOnlineDate" value="${state.recOnlineDate}"></div>
+    <div class="fitem"><label>付费类型</label><select class="inp" data-action="recPay">${optHTML(PAYTYPES,state.recPay,'全部')}</select></div>
+    <div class="fitem"><label>语言</label>${msHTML('recLang',state.recLangFilter,'全部',LANGS)}</div>
+    <div class="fitem"><label>字幕语言</label>${msHTML('recSub',state.recSubFilter,'全部',SUBS)}</div>
+    <div class="fitem"><button class="btn primary" data-action="recQuery">查 询</button><button class="btn" data-action="recReset">重 置</button></div>
+  </div>`;
+
+  // action bar (per reference screenshot)
+  html+=`<div class="actionbar">
+    <button class="btn primary" data-action="download">${I.down}下载</button>
+    <div class="spacer"></div>
+    ${colConfigHTML('recCols',state.recColVis)}
+  </div>`;
+
+  const rows=getRecRows();
+  const head=[];
+  REC_COLDEFS.forEach(([k,label])=>{if(state.recColVis[k])head.push(`<th>${label}</th>`);});
+  head.push('<th style="width:90px">操作</th>');
+  const colspan=head.length;
+  let body='';
+  if(!rows.length){
+    body=`<tr><td colspan="${colspan}"><div class="empty">${I.empty}<div>暂无上线记录</div></div></td></tr>`;
+  }else{
+    rows.forEach(rec=>{
+      let tds='';
+      REC_COLDEFS.forEach(([k])=>{if(state.recColVis[k])tds+=`<td>${recCellHTML(k,rec)}</td>`;});
+      tds+=`<td><button class="op rec" data-action="recover" data-rec="${rec.id}">${I.undo}恢复</button></td>`;
+      body+=`<tr>${tds}</tr>`;
+    });
+  }
+  html+=`<div class="table-card"><div class="table-wrap"><table><thead><tr>${head.join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+  html+=`<div class="pager"><span class="info">共 <b>${rows.length}</b> 条记录</span></div></div>`;
+  document.getElementById('content').innerHTML=html;
+}
+
+/* ---------- Actions ---------- */
+function advance(a,r){
+  const s=a.statusByRegion[r];
+  if(s==='待打标')a.statusByRegion[r]='待部署';
+  else if(s==='待部署')a.statusByRegion[r]='已部署';
+  else if(s==='已部署'){a.statusByRegion[r]='已下线';records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'下线',fromStatus:'已部署',time:now(),operator:'当前用户'});}
+}
+function reject(a,r){
+  const prev=a.statusByRegion[r];
+  delete a.statusByRegion[r];
+  records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'不予上线',fromStatus:prev||'-',time:now(),operator:'当前用户'});
+}
+function recover(recId){
+  const rec=records.find(x=>x.id===recId);if(!rec)return;
+  const a=assetById(rec.assetId);
+  if(a){
+    if(rec.action==='下线')a.statusByRegion[rec.region]='已部署';
+    else a.statusByRegion[rec.region]='待打标';
+  }
+  const idx=records.findIndex(x=>x.id===recId);records.splice(idx,1);
+}
+
+function downloadCSV(){
+  try{
+    const rows=getRecRows();
+    const head=['媒资ID','媒资标题','上线状态','原状态','上线国家/地区','上线人','上线时间','可用国家','分类','内容商','审核结果','入库时间','付费类型','类型','语言','字幕语言'];
+    const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const lines=[head.map(q).join(',')];
+    rows.forEach(rec=>{
+      const a=assetById(rec.assetId)||{};
+      const status=rec.action==='下线'?'已下线':'不予上线';
+      lines.push([rec.assetId,rec.name,status,rec.fromStatus,rec.region,rec.operator||'',rec.time,(a.countries||[]).join('|'),a.category||'',a.provider||'',a.review||'',a.inboundDate||'',a.payType||'',a.genre||'',a.language||'',a.subtitle||''].map(q).join(','));
+    });
+    const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='上线记录_'+now().replace(/[-: ]/g,'')+'.csv';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('已导出 '+rows.length+' 条上线记录');
+  }catch(err){
+    toast('当前预览环境不支持下载，请在浏览器中打开试用','info');
+  }
+}
+
+/* ---------- Modal & Toast ---------- */
+function openModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('overlay').classList.add('open');}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function toast(msg,kind='ok'){
+  const t=document.createElement('div');t.className='toast '+kind;
+  const ico=kind==='ok'?'<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':'<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
+  t.innerHTML=ico+'<span>'+msg+'</span>';
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2600);
+}
+
+/* ---------- Event delegation ---------- */
+document.addEventListener('click',e=>{
+  // close multiselects if open and click outside
+  if(!e.target.closest('.ms')){state.openMs=null;document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open'));}
+
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const a=el.dataset.action, v=el.dataset.v, id=el.dataset.id, r=el.dataset.r, rec=el.dataset.rec, mskey=el.dataset.mskey;
+
+  if(a==='top'){state.topTab=v;render();return;}
+  if(a==='region'){state.region=v;state.status='待打标';state.selected.clear();state.page=1;render();return;}
+  if(a==='status'){state.status=v;state.selected.clear();state.page=1;render();return;}
+
+  if(a==='msToggle'){state.openMs=(state.openMs===mskey)?null:mskey;render();return;}
+  if(a==='msClear'){const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};if(map[mskey])state[map[mskey]].clear();render();return;}
+  if(a==='msDone'){state.openMs=null;render();return;}
+
+  if(a==='query'){state.page=1;render();toast('已按当前条件查询');return;}
+  if(a==='addMedia'){toast('演示原型：跳转媒资库选择媒资添加','info');return;}
+  if(a==='reset'){
+    state.fId='';state.fTitle='';state.fCountry='';state.fCat='';state.fGenre='';state.fProvider='';state.fReview='';state.fPay='';
+    state.dateFrom='';state.dateTo='';
+    state.langFilter.clear();state.subFilter.clear();
+    state.status='待打标';state.page=1;render();return;
+  }
+
+  if(a==='selAll'){
+    const {rows}=getRows();
+    if(el.checked)rows.forEach(row=>state.selected.add(row.asset.id));
+    else rows.forEach(row=>state.selected.delete(row.asset.id));
+    render();return;
+  }
+  if(a==='sel'){if(el.checked)state.selected.add(id);else state.selected.delete(id);const sc=document.getElementById('selCount');if(sc)sc.textContent=state.selected.size;return;}
+
+  if(a==='pg'){const n=+v;if(n>=1){state.page=n;render();}return;}
+
+  if(a==='go'){const asset=assetById(id);advance(asset,r);toast('已上线：'+asset.name+'（'+r+'）');render();return;}
+  if(a==='down'){
+    const asset=assetById(id);
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>确认下线该媒资？</h3><p>下线后「${asset.name}」将从 <b>${r}</b> 上新池自动剔除，仅保留在【上线记录】中。该操作不影响其他区域同媒资的上线状态。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmDown" data-id="${id}" data-r="${r}">确认下线</button></div>`);
+    return;
+  }
+  if(a==='confirmDown'){const asset=assetById(id);advance(asset,r);closeModal();toast('已下线：'+asset.name+'（'+r+'）已归档至上线记录','info');render();return;}
+  if(a==='reject'){
+    const asset=assetById(id);
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>确认不予上线？</h3><p>「${asset.name}」在 <b>${r}</b> 区域将被移出上新池并归档至【上线记录】，不再参与自动上新。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmReject" data-id="${id}" data-r="${r}">确认不予上线</button></div>`);
+    return;
+  }
+  if(a==='confirmReject'){const asset=assetById(id);reject(asset,r);closeModal();toast('已标记不予上线：'+asset.name+'（'+r+'）','info');render();return;}
+  if(a==='recover'){recover(rec);toast('已恢复至上新池');render();return;}
+
+  if(a==='batchGo'){
+    const {rows}=getRows();
+    const sel=rows.filter(row=>state.selected.has(row.asset.id));
+    if(!sel.length){toast('请先选择媒资','info');return;}
+    let done=0;
+    sel.forEach(row=>{const s=row.asset.statusByRegion[row.region];if(s==='待打标'||s==='待部署'){advance(row.asset,row.region);done++;}});
+    state.selected.clear();
+    if(done)toast('批量上线完成：'+done+' 项已推进上线流程');
+    else toast('所选项中无可上线的媒资（已部署媒资请使用下线）','info');
+    render();return;
+  }
+  if(a==='batchReject'){
+    const {rows}=getRows();
+    const sel=rows.filter(row=>state.selected.has(row.asset.id));
+    if(!sel.length){toast('请先选择媒资','info');return;}
+    const ids=sel.map(x=>x.asset.id).join(',');
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>批量不予上线</h3><p>即将对 <b>${sel.length}</b> 项媒资执行不予上线，它们将从 <b>${state.region}</b> 上新池移除并归档至【上线记录】。此操作不可批量撤销（可逐条恢复）。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmBatchReject" data-ids="${ids}">确认批量不予上线</button></div>`);
+    return;
+  }
+  if(a==='confirmBatchReject'){
+    const ids=(el.dataset.ids||'').split(',');
+    let n=0;
+    ids.forEach(iid=>{const asset=assetById(iid);if(asset&&asset.statusByRegion[state.region]){reject(asset,state.region);n++;}});
+    state.selected.clear();closeModal();toast('批量不予上线完成：'+n+' 项已归档','info');render();return;
+  }
+
+  if(a==='closeModal'){closeModal();return;}
+
+  // records filters
+  if(a==='recRegionTab'){state.recRegion=(v==='')?'':v;render();return;}
+  if(a==='recQuery'){render();toast('已按当前条件查询');return;}
+  if(a==='download'){downloadCSV();return;}
+  if(a==='recReset'){
+    state.recId='';state.recTitle='';state.recStatus='';state.recAvailCountry='';state.recCat='';state.recGenre='';state.recProvider='';state.recReview='';state.recPay='';
+    state.recDateFrom='';state.recDateTo='';state.recOperator='';state.recOnlineDate='';
+    state.recLangFilter.clear();state.recSubFilter.clear();state.recCountries.clear();
+    render();return;
+  }
+});
+
+document.addEventListener('change',e=>{
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const a=el.dataset.action;
+  if(a==='fStatus'){state.status=el.value;state.selected.clear();state.page=1;render();return;}
+  if(a==='fCountry'){state.fCountry=el.value;state.page=1;render();return;}
+  if(a==='fCat'){state.fCat=el.value;state.page=1;render();return;}
+  if(a==='fGenre'){state.fGenre=el.value;state.page=1;render();return;}
+  if(a==='fProvider'){state.fProvider=el.value;state.page=1;render();return;}
+  if(a==='fReview'){state.fReview=el.value;state.page=1;render();return;}
+  if(a==='fPay'){state.fPay=el.value;state.page=1;render();return;}
+  if(a==='fDateFrom'){state.dateFrom=el.value;state.page=1;render();return;}
+  if(a==='fDateTo'){state.dateTo=el.value;state.page=1;render();return;}
+  if(a==='recStatus'){state.recStatus=el.value;render();return;}
+  if(a==='recAvailCountry'){state.recAvailCountry=el.value;render();return;}
+  if(a==='recCat'){state.recCat=el.value;render();return;}
+  if(a==='recGenre'){state.recGenre=el.value;render();return;}
+  if(a==='recProvider'){state.recProvider=el.value;render();return;}
+  if(a==='recReview'){state.recReview=el.value;render();return;}
+  if(a==='recPay'){state.recPay=el.value;render();return;}
+  if(a==='recDateFrom'){state.recDateFrom=el.value;render();return;}
+  if(a==='recDateTo'){state.recDateTo=el.value;render();return;}
+  if(a==='recOnlineDate'){state.recOnlineDate=el.value;render();return;}
+  if(a==='ms'){
+    const ms=el.dataset.ms;
+    if(ms==='poolCols'){state.colVis[el.value]=el.checked;render();return;}
+    if(ms==='recCols'){state.recColVis[el.value]=el.checked;render();return;}
+    const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};
+    const set=state[map[ms]];
+    if(set){if(el.checked)set.add(el.value);else set.delete(el.value);}
+    render();return;
+  }
+});
+// debounce text inputs
+let st;
+document.addEventListener('input',e=>{
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const a=el.dataset.action;
+  if(a==='fId'||a==='fTitle'||a==='recId'||a==='recTitle'||a==='recOperator'){
+    clearTimeout(st);
+    st=setTimeout(()=>{state[a]=el.value;render();},250);
+  }
+});
+
+function render(){
+  renderTopTabs();
+  if(state.topTab==='pool')renderPool();else renderRecords();
+}
+render();
+</script>
+</body>
+</html>
