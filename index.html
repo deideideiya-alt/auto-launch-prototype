@@ -255,6 +255,36 @@
   .modal .actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px 18px;}
   .modal .warn-ico{width:40px;height:40px;border-radius:50%;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center;margin:18px auto 4px;}
   .modal .warn-ico svg{width:22px;height:22px;}
+  .modal.wide{width:1080px;max-width:96vw;}
+  .am-head{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 2px;}
+  .am-head h3{margin:0;padding:0;font-size:15px;}
+  .am-close{width:28px;height:28px;border:none;background:transparent;border-radius:6px;color:var(--text-3);font-size:15px;cursor:pointer;}
+  .am-close:hover{background:var(--surface-2);color:var(--text);}
+  .am-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 16px;padding:8px 20px 0;}
+  .am-fitem{display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .am-fitem>label{font-size:11.5px;color:var(--text-2);}
+  .am-fitem .inp{width:100%;min-width:0;}
+  .am-btns{display:flex;gap:8px;padding:12px 20px 0;}
+  .am-count{padding:10px 20px 2px;font-size:12px;color:var(--text-2);}
+  .am-count b{color:var(--accent-d);}
+  .am-table-wrap{max-height:340px;overflow:auto;margin:8px 20px 0;border:1px solid var(--border);border-radius:8px;}
+  .am-table-wrap table{width:100%;border-collapse:collapse;font-size:12px;}
+  .am-table-wrap th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:8px 10px;font-weight:600;color:var(--text-2);border-bottom:1px solid var(--border);white-space:nowrap;z-index:1;}
+  .am-table-wrap td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .am-table-wrap tbody tr:hover td{background:var(--surface-2);}
+  .am-table-wrap tr.dup td{color:var(--text-3);}
+  .am-table-wrap tr.dup .mname{color:var(--text-3);font-weight:500;}
+  .am-table-wrap .mname{color:var(--blue);}
+  .am-pager{display:flex;align-items:center;gap:10px;padding:10px 20px 0;font-size:12px;color:var(--text-2);}
+  .am-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 16px;}
+  .am-foot b{color:var(--accent-d);}
+  .am-foot-btns{display:flex;gap:10px;}
+  .play-box{width:100%;}
+  .play-tags{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:34px;border:1px solid var(--border-strong);border-radius:8px;padding:3px 8px;background:var(--surface);}
+  .ptag{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--accent-d);border-radius:5px;padding:1px 6px;font-size:11.5px;font-weight:600;}
+  .ptag-x{cursor:pointer;font-weight:700;}
+  .ptag-add{cursor:pointer;color:var(--text-3);font-size:11px;margin-left:auto;font-weight:400;}
+  .ph{color:var(--text-3);font-size:12px;}
 
   /* Toast */
   .toasts{position:fixed;right:22px;bottom:22px;z-index:200;display:flex;flex-direction:column;gap:10px;}
@@ -358,11 +388,30 @@ for(let i=0;i<NAMES.length;i++){
     statusByRegion
   });
 }
-const records=[]; // {id,assetId,name,region,action:'下线'|'不予上线',fromStatus,time}
+const records=[]; // {id,assetId,name,region,action:'下线',fromStatus,time} — 仅下线归档；不予上线直接释放不进记录；取消上线=从记录移除（不回池）
 assets.forEach(a=>{Object.entries(a.statusByRegion).forEach(([r,s])=>{
   if(s==='已下线')records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'下线',fromStatus:'已部署',time:pastDateTime(),operator:pick(OPERATORS)});
 });});
 const assetById=id=>assets.find(a=>a.id===id);
+
+/* ---------- Media library (candidates for 添加媒资) ---------- */
+const LIB_LEVELS=['季','电影','系列'];
+const PLAY_FORMS=['URL','频道号'];
+const LIBRARY=[];
+for(let i=0;i<120;i++){
+  const base=NAMES[i%NAMES.length];
+  const title=i<NAMES.length?base:base+' '+['II','III','Stories','2024','Rewind','Chronicles'][Math.floor(i/NAMES.length)-1];
+  let vid='6ad';for(let k=0;k<14;k++)vid+='0123456789abcdef'[Math.floor(rng()*16)];
+  LIBRARY.push({
+    libId:randomId(),title,videoId:vid,bundleId:'XU'+(100000+Math.floor(rng()*900000)),
+    provider:pick(PROVIDERS),deployStatus:rng()<0.6?'待打标':'待部署',
+    countries:shuffle(REGIONS).slice(0,1+Math.floor(rng()*5)),
+    playForm:pick(PLAY_FORMS),mediaStatus:rng()<0.85?'上线':'下线',
+    category:pick(CATS),genre:pick(GENRES),level:pick(LIB_LEVELS),
+    language:pick(LANGS),subtitle:subFor('x')
+  });
+}
+function isDup(m){return assets.some(a=>a.name===m.title&&a.statusByRegion[state.region]!==undefined);}
 
 /* ---------- State ---------- */
 const state={
@@ -371,6 +420,8 @@ const state={
   fId:'',fTitle:'',fCountry:'',fCat:'',fGenre:'',fProvider:'',fReview:'',fPay:'',dateFrom:'',dateTo:'',
   colVis:{id:true,status:true,countries:true,category:true,provider:true,priority:true,review:true,risk:true,inboundDate:true,payType:true,genre:true,language:true,subtitle:true},
   pageSize:20,page:1,selected:new Set(),openMs:null,
+  amOpen:false,amPage:1,amSelected:new Set(),
+  amTitle:'',amId:'',amProvider:'',amDeploy:'',amCountry:'',amStatus:'',amCat:'',amGenre:'',amLevel:'',amLang:'',amSub:'',amPlay:new Set(),
   recRegion:'',recStatus:'',recId:'',recTitle:'',recAvailCountry:'',recCat:'',recGenre:'',recProvider:'',recReview:'',recPay:'',
   recDateFrom:'',recDateTo:'',recOperator:'',recOnlineDate:'',
   recLangFilter:new Set(),recSubFilter:new Set(),recCountries:new Set(),
@@ -416,7 +467,7 @@ function regionTabBtn(region,active,cnt,action){
 function renderRegionTabs(forRecords){
   const order=getRegionOrder();
   const label=forRecords
-    ? '按国家 / 地区分区查看下线 / 不予上线归档记录'
+    ? '按国家 / 地区分区查看下线归档记录'
     : '按国家 / 地区分区（分区域独立上新池，单区域处理不影响其他区域同媒资状态）';
   let h='<div class="section-label">'+label+'</div><div class="region-tabs">';
   if(forRecords){
@@ -479,7 +530,7 @@ function renderPool(){
     <button class="btn primary" data-action="batchGo">批量上线</button>
     <button class="btn danger-o" data-action="batchReject">批量不予上线</button>
     <button class="btn" data-action="addMedia">添加媒资</button>
-    <span class="archived-note">批量不予上线将媒资移出上新池并归档至【上线记录】</span>
+    <span class="archived-note">批量不予上线将媒资移出上新池并直接释放（不进入上线记录）</span>
     <div class="spacer"></div>
     ${colConfigHTML('poolCols',state.colVis)}
   </div>`;
@@ -636,7 +687,7 @@ function recCellHTML(k,rec){
   const a=assetById(rec.assetId);
   switch(k){
     case 'id':return `<div class="mname">${rec.name}</div><div class="mid">${rec.assetId}</div>`;
-    case 'status':return rec.action==='下线'?badge('已下线'):`<span class="badge b-reject"><span class="pip" style="background:${STATUS_PIP['不予上线']}"></span>不予上线</span>`;
+    case 'status':return badge('已下线');
     case 'fromStatus':return badge(rec.fromStatus);
     case 'region':return `<span class="ctag cur">${rec.region}</span>`;
     case 'operator':return rec.operator||'-';
@@ -659,13 +710,12 @@ function renderRecords(){
   let regionTabs=renderRegionTabs(true);
 
   let html=regionTabs;
-  html+=`<div class="legend">${I.info}<div>媒资执行<b>下线</b>或<b>不予上线</b>后，会从对应区域上新池自动移除并归档至本记录；<b>已部署</b>状态媒资在原池中保留，支持跨栏目上线。可通过【取消上线】重新纳回上新池。</div></div>`;
+  html+=`<div class="legend">${I.info}<div>媒资执行<b>下线</b>后，会从对应区域上新池自动移除并归档至本记录；<b>不予上线</b>的媒资会直接从页面释放，不进入本记录。<b>已部署</b>状态媒资在原池中保留，支持跨栏目上线。点击【取消上线】会将该媒资从上新媒资包中移除（不会回到上新池）。</div></div>`;
 
   // filter form (layout per reference screenshot)
   const fStatusSel=`<select class="inp" data-action="recStatus">
     <option value="" ${state.recStatus===''?'selected':''}>全部</option>
     <option value="下线" ${state.recStatus==='下线'?'selected':''}>已下线</option>
-    <option value="不予上线" ${state.recStatus==='不予上线'?'selected':''}>不予上线</option>
   </select>`;
   html+=`<div class="toolbar">
     <div class="fitem"><label>媒资ID</label><input class="inp" style="width:180px" data-action="recId" placeholder="请输入媒资ID/BundleID" value="${state.recId}"></div>
@@ -722,18 +772,13 @@ function advance(a,r){
   else if(s==='已部署'){a.statusByRegion[r]='已下线';records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'下线',fromStatus:'已部署',time:now(),operator:'当前用户'});}
 }
 function reject(a,r){
-  const prev=a.statusByRegion[r];
+  // 不予上线：移出上新池并直接释放（不进入上线记录）
   delete a.statusByRegion[r];
-  records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'不予上线',fromStatus:prev||'-',time:now(),operator:'当前用户'});
 }
 function cancelOnline(recId){
-  const rec=records.find(x=>x.id===recId);if(!rec)return;
-  const a=assetById(rec.assetId);
-  if(a){
-    if(rec.action==='下线')a.statusByRegion[rec.region]='已部署';
-    else a.statusByRegion[rec.region]='待打标';
-  }
-  const idx=records.findIndex(x=>x.id===recId);records.splice(idx,1);
+  // 取消上线：将该媒资从上新媒资包（上线记录）中移除，不回到上新池
+  const idx=records.findIndex(x=>x.id===recId);if(idx<0)return;
+  records.splice(idx,1);
 }
 
 function downloadCSV(){
@@ -759,9 +804,111 @@ function downloadCSV(){
   }
 }
 
+/* ---------- 添加媒资 modal ---------- */
+function amRows(){
+  return LIBRARY.filter(m=>{
+    if(state.amTitle&&!m.title.toLowerCase().includes(state.amTitle.toLowerCase()))return false;
+    if(state.amId&&!(m.videoId.toLowerCase().includes(state.amId.toLowerCase())||m.bundleId.toLowerCase().includes(state.amId.toLowerCase())))return false;
+    if(state.amProvider&&m.provider!==state.amProvider)return false;
+    if(state.amDeploy&&m.deployStatus!==state.amDeploy)return false;
+    if(state.amCountry&&!m.countries.includes(state.amCountry))return false;
+    if(state.amPlay.size&&!state.amPlay.has(m.playForm))return false;
+    if(state.amStatus&&m.mediaStatus!==state.amStatus)return false;
+    if(state.amCat&&m.category!==state.amCat)return false;
+    if(state.amGenre&&m.genre!==state.amGenre)return false;
+    if(state.amLevel&&m.level!==state.amLevel)return false;
+    if(state.amLang&&m.language!==state.amLang)return false;
+    if(state.amSub&&!(m.subtitle||'').split(',').map(s=>s.trim()).includes(state.amSub))return false;
+    return true;
+  });
+}
+function amPlayHTML(){
+  let tags='';state.amPlay.forEach(v=>{tags+=`<span class="ptag">${v}<b class="ptag-x" data-action="amPlayRemove" data-v="${v}">×</b></span>`;});
+  let opts='';PLAY_FORMS.forEach(v=>{opts+=`<label class="ms-opt"><input type="checkbox" data-ms="amPlay" value="${v}" ${state.amPlay.has(v)?'checked':''}>${v}</label>`;});
+  const open=state.openMs==='amPlay'?'open':'';
+  return `<div class="ms ${open}" data-mskey="amPlay"><div class="play-tags">${tags||'<span class="ph">请选择播放形式</span>'}<b class="ptag-add" data-action="msToggle" data-mskey="amPlay">▾</b></div><div class="ms-panel">${opts}</div></div>`;
+}
+function amModalHTML(){
+  const PER=10;
+  const rows=amRows();
+  const pages=Math.max(1,Math.ceil(rows.length/PER));
+  if(state.amPage>pages)state.amPage=pages;
+  const start=(state.amPage-1)*PER;
+  const pageRows=rows.slice(start,start+PER);
+  const avail=rows.filter(m=>!isDup(m));
+  const allSel=avail.length>0&&avail.every(m=>state.amSelected.has(m.libId));
+  const fitem=(label,ctrl)=>`<div class="am-fitem"><label>${label}</label>${ctrl}</div>`;
+  const filters=`
+  <div class="am-filters">
+    ${fitem('媒资标题',`<input class="inp" data-action="amTitle" placeholder="请输入媒资标题" value="${state.amTitle}">`)}
+    ${fitem('媒资ID',`<input class="inp" data-action="amId" placeholder="VideoID/BundleID" value="${state.amId}">`)}
+    ${fitem('内容商',`<select class="inp" data-action="amProvider">${optHTML(PROVIDERS,state.amProvider,'全部')}</select>`)}
+    ${fitem('部署状态',`<select class="inp" data-action="amDeploy">${optHTML(['待打标','待部署','已部署'],state.amDeploy,'全部')}</select>`)}
+    ${fitem('可用国家',`<select class="inp" data-action="amCountry">${optHTML(REGIONS,state.amCountry,'全部')}</select>`)}
+    ${fitem('播放形式',amPlayHTML())}
+    ${fitem('媒资状态',`<select class="inp" data-action="amStatus">${optHTML(['上线','下线'],state.amStatus,'全部')}</select>`)}
+    ${fitem('分类',`<select class="inp" data-action="amCat">${optHTML(CATS,state.amCat,'全部')}</select>`)}
+    ${fitem('类型',`<select class="inp" data-action="amGenre">${optHTML(GENRES,state.amGenre,'请选择类型')}</select>`)}
+    ${fitem('媒资层级',`<select class="inp" data-action="amLevel">${optHTML(LIB_LEVELS,state.amLevel,'全部')}</select>`)}
+    ${fitem('语言',`<select class="inp" data-action="amLang">${optHTML(LANGS,state.amLang,'全部')}</select>`)}
+    ${fitem('字幕语言',`<select class="inp" data-action="amSub">${optHTML(SUBS,state.amSub,'全部')}</select>`)}
+  </div>`;
+  let body='';
+  if(!pageRows.length){
+    body=`<tr><td colspan="11"><div class="empty">${I.empty}<div>未找到匹配媒资</div></div></td></tr>`;
+  }else{
+    pageRows.forEach(m=>{
+      const dup=isDup(m);
+      const msBadge=m.mediaStatus==='上线'?'<span class="badge b-done"><span class="pip" style="background:var(--green)"></span>上线</span>':'<span class="badge b-off"><span class="pip" style="background:var(--gray)"></span>下线</span>';
+      body+=`<tr class="${dup?'dup':''}">
+        <td><input type="checkbox" data-action="amSel" data-id="${m.libId}" ${state.amSelected.has(m.libId)?'checked':''} ${dup?'disabled':''}></td>
+        <td><div class="mname">${m.title}</div><div class="mid">VideoID:${m.videoId}</div><div class="mid">BundleID:${m.bundleId}</div></td>
+        <td>${m.provider}</td>
+        <td>${badge(m.deployStatus)}</td>
+        <td><div class="countries">${m.countries.map(c=>`<span class="ctag">${c}</span>`).join('')}</div></td>
+        <td><span class="ctag">${m.playForm}</span></td>
+        <td>${msBadge}</td>
+        <td>${m.category}</td><td>${m.genre}</td><td>${m.level}</td><td>${m.language}</td>
+      </tr>`;
+    });
+  }
+  return `<div class="am-head"><h3>添加媒资</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
+  ${filters}
+  <div class="am-btns"><button class="btn primary" data-action="amQuery">查 询</button><button class="btn" data-action="amReset">重 置</button></div>
+  <div class="am-count">共找到 <b>${rows.length}</b> 条媒资，已有重复媒资不可选</div>
+  <div class="am-table-wrap"><table><thead><tr>
+    <th style="width:34px"><input type="checkbox" data-action="amSelAll" ${allSel?'checked':''} ${avail.length?'':'disabled'}></th>
+    <th>媒资信息</th><th>内容商</th><th>部署状态</th><th>可用国家</th><th>播放形式</th><th>媒资状态</th><th>分类</th><th>类型</th><th>媒资层级</th><th>语言</th>
+  </tr></thead><tbody>${body}</tbody></table></div>
+  <div class="am-pager">
+    <button class="btn" data-action="amPg" data-v="prev" ${state.amPage<=1?'disabled':''}>上一页</button>
+    <span>第 ${state.amPage} / ${pages} 页</span>
+    <button class="btn" data-action="amPg" data-v="next" ${state.amPage>=pages?'disabled':''}>下一页</button>
+  </div>
+  <div class="am-foot">
+    <span>已选 <b>${state.amSelected.size}</b> 项媒资</span>
+    <div class="am-foot-btns">
+      <button class="btn" data-action="closeModal">取 消</button>
+      <button class="btn primary" data-action="amConfirm" ${state.amSelected.size?'':'disabled'}>确认添加</button>
+    </div>
+  </div>`;
+}
+function openAddModal(){
+  state.amOpen=true;state.amPage=1;state.amSelected.clear();
+  state.amTitle='';state.amId='';state.amProvider='';state.amDeploy='';state.amCountry='';state.amStatus='';state.amCat='';state.amGenre='';state.amLevel='';state.amLang='';state.amSub='';
+  state.amPlay.clear();
+  renderAmModal();
+}
+function renderAmModal(){
+  const m=document.getElementById('modal');
+  m.className='modal wide';
+  m.innerHTML=amModalHTML();
+  document.getElementById('overlay').classList.add('open');
+}
+
 /* ---------- Modal & Toast ---------- */
-function openModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('overlay').classList.add('open');}
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function openModal(html,wide){const m=document.getElementById('modal');m.className='modal'+(wide?' wide':'');m.innerHTML=html;document.getElementById('overlay').classList.add('open');}
+function closeModal(){state.amOpen=false;const m=document.getElementById('modal');m.className='modal';m.innerHTML='';document.getElementById('overlay').classList.remove('open');}
 function toast(msg,kind='ok'){
   const t=document.createElement('div');t.className='toast '+kind;
   const ico=kind==='ok'?'<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':'<svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
@@ -782,12 +929,12 @@ document.addEventListener('click',e=>{
   if(a==='region'){state.region=v;state.status='待打标';state.selected.clear();state.page=1;render();return;}
   if(a==='status'){state.status=v;state.selected.clear();state.page=1;render();return;}
 
-  if(a==='msToggle'){state.openMs=(state.openMs===mskey)?null:mskey;render();return;}
+  if(a==='msToggle'){state.openMs=(state.openMs===mskey)?null:mskey;if(state.amOpen){renderAmModal();}else{render();}return;}
   if(a==='msClear'){const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};if(map[mskey])state[map[mskey]].clear();render();return;}
   if(a==='msDone'){state.openMs=null;render();return;}
 
   if(a==='query'){state.page=1;render();toast('已按当前条件查询');return;}
-  if(a==='addMedia'){toast('演示原型：跳转媒资库选择媒资添加','info');return;}
+  if(a==='addMedia'){openAddModal();return;}
   if(a==='reset'){
     state.fId='';state.fTitle='';state.fCountry='';state.fCat='';state.fGenre='';state.fProvider='';state.fReview='';state.fPay='';
     state.dateFrom='';state.dateTo='';
@@ -814,11 +961,11 @@ document.addEventListener('click',e=>{
   if(a==='confirmDown'){const asset=assetById(id);advance(asset,r);closeModal();toast('已下线：'+asset.name+'（'+r+'）已归档至上线记录','info');render();return;}
   if(a==='reject'){
     const asset=assetById(id);
-    openModal(`<div class="warn-ico">${I.warn}</div><h3>确认不予上线？</h3><p>「${asset.name}」在 <b>${r}</b> 区域将被移出上新池并归档至【上线记录】，不再参与自动上新。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmReject" data-id="${id}" data-r="${r}">确认不予上线</button></div>`);
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>确认不予上线？</h3><p>「${asset.name}」在 <b>${r}</b> 区域将被移出上新池并直接释放（不进入【上线记录】），不再参与自动上新。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmReject" data-id="${id}" data-r="${r}">确认不予上线</button></div>`);
     return;
   }
-  if(a==='confirmReject'){const asset=assetById(id);reject(asset,r);closeModal();toast('已标记不予上线：'+asset.name+'（'+r+'）','info');render();return;}
-  if(a==='cancelOnline'){cancelOnline(rec);toast('已取消该上线记录，媒资重新纳回上新池');render();return;}
+  if(a==='confirmReject'){const asset=assetById(id);reject(asset,r);closeModal();toast('已不予上线：'+asset.name+'（'+r+'），已从页面释放','info');render();return;}
+  if(a==='cancelOnline'){const rc=records.find(x=>x.id===rec);cancelOnline(rec);toast('已从上新媒资包移除'+(rc?('：'+rc.name):''),'info');render();return;}
 
   if(a==='batchGo'){
     const {rows}=getRows();
@@ -836,14 +983,39 @@ document.addEventListener('click',e=>{
     const sel=rows.filter(row=>state.selected.has(row.asset.id));
     if(!sel.length){toast('请先选择媒资','info');return;}
     const ids=sel.map(x=>x.asset.id).join(',');
-    openModal(`<div class="warn-ico">${I.warn}</div><h3>批量不予上线</h3><p>即将对 <b>${sel.length}</b> 项媒资执行不予上线，它们将从 <b>${state.region}</b> 上新池移除并归档至【上线记录】。此操作不可批量撤销（可逐条取消上线）。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmBatchReject" data-ids="${ids}">确认批量不予上线</button></div>`);
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>批量不予上线</h3><p>即将对 <b>${sel.length}</b> 项媒资执行不予上线，它们将从 <b>${state.region}</b> 上新池移除并直接释放，不会进入【上线记录】，也不再参与自动上新。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmBatchReject" data-ids="${ids}">确认批量不予上线</button></div>`);
     return;
   }
   if(a==='confirmBatchReject'){
     const ids=(el.dataset.ids||'').split(',');
     let n=0;
     ids.forEach(iid=>{const asset=assetById(iid);if(asset&&asset.statusByRegion[state.region]){reject(asset,state.region);n++;}});
-    state.selected.clear();closeModal();toast('批量不予上线完成：'+n+' 项已归档','info');render();return;
+    state.selected.clear();closeModal();toast('批量不予上线完成：'+n+' 项已释放','info');render();return;
+  }
+
+  /* ----- 添加媒资 modal ----- */
+  if(a==='amSel'){const m=LIBRARY.find(x=>x.libId===id);if(m&&isDup(m))return;if(el.checked)state.amSelected.add(id);else state.amSelected.delete(id);renderAmModal();return;}
+  if(a==='amSelAll'){const avail=amRows().filter(m=>!isDup(m));if(el.checked)avail.forEach(m=>state.amSelected.add(m.libId));else avail.forEach(m=>state.amSelected.delete(m.libId));renderAmModal();return;}
+  if(a==='amPlayRemove'){state.amPlay.delete(v);renderAmModal();return;}
+  if(a==='amQuery'){state.amPage=1;renderAmModal();return;}
+  if(a==='amReset'){state.amTitle='';state.amId='';state.amProvider='';state.amDeploy='';state.amCountry='';state.amStatus='';state.amCat='';state.amGenre='';state.amLevel='';state.amLang='';state.amSub='';state.amPlay.clear();state.amPage=1;renderAmModal();return;}
+  if(a==='amPg'){
+    const pages=Math.max(1,Math.ceil(amRows().length/10));
+    if(v==='prev')state.amPage=Math.max(1,state.amPage-1);
+    else if(v==='next')state.amPage=Math.min(pages,state.amPage+1);
+    renderAmModal();return;
+  }
+  if(a==='amConfirm'){
+    const rg=state.region;let n=0;
+    state.amSelected.forEach(lid=>{
+      const m=LIBRARY.find(x=>x.libId===lid);if(!m)return;
+      if(isDup(m))return;
+      assets.push({id:randomId(),name:m.title,countries:m.countries.slice(),category:m.category,provider:m.provider,priority:1+Math.floor(rng()*5),review:rng()<0.75?'安全':'敏感',risk:'无',inboundDate:randomDate(),payType:pick(PAYTYPES),genre:m.genre,language:m.language,subtitle:m.subtitle,playForm:m.playForm,level:m.level,statusByRegion:{[rg]:'待打标'}});
+      n++;
+    });
+    state.amSelected.clear();closeModal();
+    toast('已添加 '+n+' 项媒资至 '+rg+' 上新池');
+    render();return;
   }
 
   if(a==='closeModal'){closeModal();return;}
@@ -883,10 +1055,20 @@ document.addEventListener('change',e=>{
   if(a==='recDateFrom'){state.recDateFrom=el.value;render();return;}
   if(a==='recDateTo'){state.recDateTo=el.value;render();return;}
   if(a==='recOnlineDate'){state.recOnlineDate=el.value;render();return;}
+  if(a==='amProvider'){state.amProvider=el.value;return;}
+  if(a==='amDeploy'){state.amDeploy=el.value;return;}
+  if(a==='amCountry'){state.amCountry=el.value;return;}
+  if(a==='amStatus'){state.amStatus=el.value;return;}
+  if(a==='amCat'){state.amCat=el.value;return;}
+  if(a==='amGenre'){state.amGenre=el.value;return;}
+  if(a==='amLevel'){state.amLevel=el.value;return;}
+  if(a==='amLang'){state.amLang=el.value;return;}
+  if(a==='amSub'){state.amSub=el.value;return;}
   if(a==='ms'){
     const ms=el.dataset.ms;
     if(ms==='poolCols'){state.colVis[el.value]=el.checked;render();return;}
     if(ms==='recCols'){state.recColVis[el.value]=el.checked;render();return;}
+    if(ms==='amPlay'){if(el.checked)state.amPlay.add(el.value);else state.amPlay.delete(el.value);renderAmModal();return;}
     const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};
     const set=state[map[ms]];
     if(set){if(el.checked)set.add(el.value);else set.delete(el.value);}
@@ -902,6 +1084,7 @@ document.addEventListener('input',e=>{
     clearTimeout(st);
     st=setTimeout(()=>{state[a]=el.value;render();},250);
   }
+  if(a==='amTitle'||a==='amId'){state[a]=el.value;}
 });
 
 function render(){
