@@ -104,6 +104,10 @@
     border-radius:9px;padding:0 6px;min-width:18px;text-align:center;
   }
   .region-tab.active .rcnt{background:#fff;color:var(--accent-d);}
+  .region-tab.draggable{cursor:grab;}
+  .region-tab.dragging{opacity:.4;}
+  .region-tab.drag-over{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft);background:var(--accent-soft);}
+  .oa-sel{height:30px!important;padding:0 8px;font-size:12px;}
 
   /* Status tabs */
   .status-tabs{display:flex;gap:0;margin:14px 0 14px;border:1px solid var(--border);background:var(--surface);border-radius:10px;overflow:hidden;width:fit-content;box-shadow:var(--shadow);}
@@ -280,10 +284,7 @@
       <span class="title">自动化上新</span>
       <span class="sub">上新策略配置</span>
     </div>
-    <div class="header-meta">
-      <span><span class="dot"></span>全球媒资调度</span>
-      <span id="globalStat"></span>
-      <div class="avatar">OP</div>
+    <div class="header-meta" id="headerMeta">
     </div>
   </header>
 
@@ -319,6 +320,20 @@ const PAYTYPES=['免费','VIP','单片付费'];
 const OPERATORS=['张敏','李强','王芳','刘洋','陈静','赵磊'];
 const STATUS_PIP={'待打标':'var(--amber)','待部署':'var(--blue)','已部署':'var(--green)','已下线':'var(--gray)','不予上线':'var(--red)'};
 const REGION_LANG={'US':['英语'],'AU':['英语'],'UK':['英语'],'IN':['印地语','英语'],'FR':['法语'],'DE':['德语'],'IT':['意大利语'],'BE':['法语','荷兰语'],'LATAM(除BR)':['西班牙语','葡萄牙语'],'BR':['葡萄牙语'],'ES':['西班牙语'],'PH':['英语','他加禄语'],'VN':['越南语'],'TH':['泰语'],'ID':['印尼语'],'MENA':['阿拉伯语'],'其它国家':['英语'],'LAE':['西班牙语']};
+
+/* OA account (simulated logged-in account; region tab order is remembered per account) */
+const OA_ACCOUNTS=[{id:'zhangmin',name:'张敏'},{id:'liqiang',name:'李强'},{id:'wangfang',name:'王芳'}];
+let OA_USER='zhangmin';
+try{const s=localStorage.getItem('autoLaunch.oaUser');if(s&&OA_ACCOUNTS.some(o=>o.id===s))OA_USER=s;}catch(e){}
+function oaName(id){const o=OA_ACCOUNTS.find(x=>x.id===id);return o?o.name:id;}
+function oaInitial(){const n=oaName(OA_USER);return n?n[0]:'?';}
+function regionOrderKey(){return 'autoLaunch.regionOrder.'+OA_USER;}
+function getRegionOrder(){
+  try{const raw=localStorage.getItem(regionOrderKey());if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length===REGIONS.length&&arr.every(r=>REGIONS.includes(r))&&new Set(arr).size===REGIONS.length)return arr;}}catch(e){}
+  return REGIONS.slice();
+}
+function setRegionOrder(arr){try{localStorage.setItem(regionOrderKey(),JSON.stringify(arr));}catch(e){}}
+let dragRg=null;
 
 /* ---------- Data generation ---------- */
 const NAMES=['AGONY IN LOVE','Harambe','Girl Lost: A Hollywood Story','The Little Witch','Rally Caps','Dark Valley','Summer Romance','Midnight Echo','Crimson Tide','Lost Horizon','Neon Shadows','The Last Voyage','Silent Witness','Broken Chains','Eternal Flame','Urban Legend','Phantom Ride','Golden Hour','Cold Case','Dreamcatcher','Iron Will','Northern Lights','The Silent Sea','Paper Moon','Velvet Storm','Echoes of Time','The Forgotten','Shattered Glass','Wild Heart','Quiet Storm','Last Train Home','The Negotiator','Hidden Truth','Burning Sky','Frozen Lake','The Collector','Distant Stars','Rising Sun','Crimson Peak','The Wanderer','Nightfall','Solar Flare','The Archivist','Broken Mirror','Final Curtain','Glass House','The Outsider','Thunder Road','Whispering Pines','Coastal Drift','Fallen Star','The Long Way','Blue Monday','Scarlet Letter','Open Window','The Third Door','Maple Street','Saltwater','Year of the Dog','Concrete Jungle','The Messenger','Low Tide','Green Lake','Paper Boats','Stone Garden','The Briefcase','Night Owl','Redemption Rd','Frostbitten','The Cartographer','Hollow Point','Moonlit Bay','The Inheritance','Saffron Sky','Tidal Wave','The Lighthouse','Quiet Riot','Broken Arrow','Silver Lining','The Pendulum','Cargo 9','Warm Current','Driftwood','The Confession','Lantern Festival','The Salesman','Patchwork','The Veteran','Glass Canyon','Northern Star','The Interpreter','Slow Burn','The Orchid','Melting Snow','The Outpost','Closed Circuit','The Heirloom'];
@@ -384,18 +399,46 @@ function renderTopTabs(){
   document.getElementById('globalStat').textContent='媒资 '+assets.length+' · 上线记录 '+recCnt;
 }
 
+/* ---------- Render: header (OA account switch) ---------- */
+function renderHeader(){
+  const opts=OA_ACCOUNTS.map(o=>`<option value="${o.id}" ${o.id===OA_USER?'selected':''}>${o.name}（OA）</option>`).join('');
+  document.getElementById('headerMeta').innerHTML=
+    `<span><span class="dot"></span>全球媒资调度</span>`+
+    `<span id="globalStat"></span>`+
+    `<select class="inp oa-sel" data-action="oaUser" title="切换登录 OA 账号（国家 tab 的拖动排序按账号独立记忆）">${opts}</select>`+
+    `<div class="avatar" title="当前 OA 账号：${oaName(OA_USER)}">${oaInitial()}</div>`;
+}
+
+/* ---------- Region tabs (shared order, draggable, per-OA persistence) ---------- */
+function regionTabBtn(region,active,cnt,action){
+  return `<button class="region-tab draggable ${active?'active':''}" draggable="true" data-action="${action}" data-v="${region}" data-rg="${region}">${region}<span class="rcnt">${cnt}</span></button>`;
+}
+function renderRegionTabs(forRecords){
+  const order=getRegionOrder();
+  const label=forRecords
+    ? '按国家 / 地区分区查看下线 / 不予上线归档记录'
+    : '按国家 / 地区分区（分区域独立上新池，单区域处理不影响其他区域同媒资状态）';
+  let h='<div class="section-label">'+label+'</div><div class="region-tabs">';
+  if(forRecords){
+    const allActive=state.recRegion==='';
+    h+=`<button class="region-tab ${allActive?'active':''}" data-action="recRegionTab" data-v="">全部<span class="rcnt">${records.length}</span></button>`;
+  }
+  order.forEach(rg=>{
+    const cnt=forRecords?records.filter(x=>x.region===rg).length:assets.filter(a=>['待打标','待部署','已部署'].includes(a.statusByRegion[rg])).length;
+    const active=forRecords?(state.recRegion===rg):(rg===state.region);
+    h+=regionTabBtn(rg,active,cnt,forRecords?'recRegionTab':'region');
+  });
+  h+='</div>';
+  return h;
+}
+
 /* ---------- Render: pool view ---------- */
 function statusCount(r,s){return assets.filter(a=>a.statusByRegion[r]===s).length;}
 
 function renderPool(){
   const r=state.region;
-  // region tabs
-  let regionTabs='<div class="section-label">按国家 / 地区分区（分区域独立上新池，单区域处理不影响其他区域同媒资状态）</div><div class="region-tabs">';
-  REGIONS.forEach(rg=>{
-    const cnt=assets.filter(a=>['待打标','待部署','已部署'].includes(a.statusByRegion[rg])).length;
-    regionTabs+=`<button class="region-tab ${rg===r?'active':''}" data-action="region" data-v="${rg}">${rg}<span class="rcnt">${cnt}</span></button>`;
-  });
-  regionTabs+='</div>';
+  // region tabs (draggable, order persisted per OA account)
+  let regionTabs=renderRegionTabs(false);
 
   // status tabs
   const statuses=['待打标','待部署','已部署'];
@@ -612,17 +655,11 @@ function recCellHTML(k,rec){
 }
 
 function renderRecords(){
-  // region partition tabs (same as pool) + 全部 overview
-  let regionTabs='<div class="section-label">按国家 / 地区分区查看下线 / 不予上线归档记录</div><div class="region-tabs">';
-  regionTabs+=`<button class="region-tab ${state.recRegion===''?'active':''}" data-action="recRegionTab" data-v="">全部<span class="rcnt">${records.length}</span></button>`;
-  REGIONS.forEach(rg=>{
-    const cnt=records.filter(x=>x.region===rg).length;
-    regionTabs+=`<button class="region-tab ${state.recRegion===rg?'active':''}" data-action="recRegionTab" data-v="${rg}">${rg}<span class="rcnt">${cnt}</span></button>`;
-  });
-  regionTabs+='</div>';
+  // region partition tabs (draggable) + 全部 overview
+  let regionTabs=renderRegionTabs(true);
 
   let html=regionTabs;
-  html+=`<div class="legend">${I.info}<div>媒资执行<b>下线</b>或<b>不予上线</b>后，会从对应区域上新池自动移除并归档至本记录；<b>已部署</b>状态媒资在原池中保留，支持跨栏目上线。可通过【恢复】重新纳回上新池。</div></div>`;
+  html+=`<div class="legend">${I.info}<div>媒资执行<b>下线</b>或<b>不予上线</b>后，会从对应区域上新池自动移除并归档至本记录；<b>已部署</b>状态媒资在原池中保留，支持跨栏目上线。可通过【取消上线】重新纳回上新池。</div></div>`;
 
   // filter form (layout per reference screenshot)
   const fStatusSel=`<select class="inp" data-action="recStatus">
@@ -659,7 +696,7 @@ function renderRecords(){
   const rows=getRecRows();
   const head=[];
   REC_COLDEFS.forEach(([k,label])=>{if(state.recColVis[k])head.push(`<th>${label}</th>`);});
-  head.push('<th style="width:90px">操作</th>');
+  head.push('<th style="width:110px">操作</th>');
   const colspan=head.length;
   let body='';
   if(!rows.length){
@@ -668,7 +705,7 @@ function renderRecords(){
     rows.forEach(rec=>{
       let tds='';
       REC_COLDEFS.forEach(([k])=>{if(state.recColVis[k])tds+=`<td>${recCellHTML(k,rec)}</td>`;});
-      tds+=`<td><button class="op rec" data-action="recover" data-rec="${rec.id}">${I.undo}恢复</button></td>`;
+      tds+=`<td><button class="op rec" data-action="cancelOnline" data-rec="${rec.id}">${I.undo}取消上线</button></td>`;
       body+=`<tr>${tds}</tr>`;
     });
   }
@@ -689,7 +726,7 @@ function reject(a,r){
   delete a.statusByRegion[r];
   records.push({id:randomId(),assetId:a.id,name:a.name,region:r,action:'不予上线',fromStatus:prev||'-',time:now(),operator:'当前用户'});
 }
-function recover(recId){
+function cancelOnline(recId){
   const rec=records.find(x=>x.id===recId);if(!rec)return;
   const a=assetById(rec.assetId);
   if(a){
@@ -781,7 +818,7 @@ document.addEventListener('click',e=>{
     return;
   }
   if(a==='confirmReject'){const asset=assetById(id);reject(asset,r);closeModal();toast('已标记不予上线：'+asset.name+'（'+r+'）','info');render();return;}
-  if(a==='recover'){recover(rec);toast('已恢复至上新池');render();return;}
+  if(a==='cancelOnline'){cancelOnline(rec);toast('已取消该上线记录，媒资重新纳回上新池');render();return;}
 
   if(a==='batchGo'){
     const {rows}=getRows();
@@ -799,7 +836,7 @@ document.addEventListener('click',e=>{
     const sel=rows.filter(row=>state.selected.has(row.asset.id));
     if(!sel.length){toast('请先选择媒资','info');return;}
     const ids=sel.map(x=>x.asset.id).join(',');
-    openModal(`<div class="warn-ico">${I.warn}</div><h3>批量不予上线</h3><p>即将对 <b>${sel.length}</b> 项媒资执行不予上线，它们将从 <b>${state.region}</b> 上新池移除并归档至【上线记录】。此操作不可批量撤销（可逐条恢复）。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmBatchReject" data-ids="${ids}">确认批量不予上线</button></div>`);
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>批量不予上线</h3><p>即将对 <b>${sel.length}</b> 项媒资执行不予上线，它们将从 <b>${state.region}</b> 上新池移除并归档至【上线记录】。此操作不可批量撤销（可逐条取消上线）。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn danger" data-action="confirmBatchReject" data-ids="${ids}">确认批量不予上线</button></div>`);
     return;
   }
   if(a==='confirmBatchReject'){
@@ -826,6 +863,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const el=e.target.closest('[data-action]');if(!el)return;
   const a=el.dataset.action;
+  if(a==='oaUser'){OA_USER=el.value;try{localStorage.setItem('autoLaunch.oaUser',OA_USER);}catch(e){}render();toast('已切换 OA 账号：'+oaName(OA_USER)+'，国家 tab 顺序已按该账号记忆恢复');return;}
   if(a==='fStatus'){state.status=el.value;state.selected.clear();state.page=1;render();return;}
   if(a==='fCountry'){state.fCountry=el.value;state.page=1;render();return;}
   if(a==='fCat'){state.fCat=el.value;state.page=1;render();return;}
@@ -867,9 +905,53 @@ document.addEventListener('input',e=>{
 });
 
 function render(){
+  renderHeader();
   renderTopTabs();
   if(state.topTab==='pool')renderPool();else renderRecords();
 }
+
+/* ---------- Drag-to-reorder region tabs (persisted per OA account) ---------- */
+document.addEventListener('dragstart',e=>{
+  const tab=e.target.closest('.region-tab');
+  if(!tab||tab.dataset.rg===undefined)return;
+  dragRg=tab.dataset.rg;
+  tab.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  try{e.dataTransfer.setData('text/plain',dragRg);}catch(_){}
+});
+document.addEventListener('dragend',e=>{
+  const tab=e.target.closest('.region-tab');
+  if(tab)tab.classList.remove('dragging');
+  document.querySelectorAll('.region-tab.drag-over').forEach(t=>t.classList.remove('drag-over'));
+  dragRg=null;
+});
+document.addEventListener('dragover',e=>{
+  const tab=e.target.closest('.region-tab');
+  if(!tab||tab.dataset.rg===undefined)return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.region-tab.drag-over').forEach(t=>t.classList.remove('drag-over'));
+  if(tab.dataset.rg!==dragRg)tab.classList.add('drag-over');
+});
+document.addEventListener('drop',e=>{
+  const tab=e.target.closest('.region-tab');
+  if(!tab||tab.dataset.rg===undefined)return;
+  e.preventDefault();
+  const target=tab.dataset.rg;
+  if(dragRg&&target&&dragRg!==target){
+    const order=getRegionOrder();
+    const from=order.indexOf(dragRg);
+    const to=order.indexOf(target);
+    if(from>=0&&to>=0){
+      order.splice(from,1);
+      order.splice(to,0,dragRg);
+      setRegionOrder(order);
+      render();
+    }
+  }
+  tab.classList.remove('drag-over');
+});
+
 render();
 </script>
 </body>
