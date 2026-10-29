@@ -390,8 +390,9 @@ const REGION_LANG={'US':['英语'],'AU':['英语'],'UK':['英语'],'IN':['印地
 /* ---------- 自动化工作台 constants ---------- */
 const AUTO_CATS=['Movies','TV Series','Live'];
 const AUTO_PLAY=['URL','DEEPLINK','WEBURL'];
+const AUTO_REVIEW=['安全','敏感','违规'];
 const AUTO_PROVIDERS=['Plex AVOD','filmHub','ITN Studios','Allrites','Tubi','Adrise','GlobalPix'];
-const AUTO_MS_MAP={autoDeploy:'deploy',autoLang:'langs',autoSub:'subs',autoCat:'cats',autoPlay:'play'};
+const AUTO_MS_MAP={autoDeploy:'deploy',autoLang:'langs',autoSub:'subs',autoReview:'review',autoCat:'cats',autoPlay:'play'};
 /* 标准标签池：[标签, 标签类别]（Genre Type / Subgenre / Topic / Element / Feel） */
 const TAG_POOL=[
   ['犯罪','Genre'],['浪漫','Genre'],['喜剧','Genre'],['动作','Genre'],['恐怖','Genre'],['科幻','Genre'],['动画','Genre'],['冒险','Genre'],['剧情','Genre'],['奇幻','Genre'],
@@ -1031,6 +1032,7 @@ function autoCfgFor(rg){
     langs:new Set(),
     subs:new Set(),
     mStatus:'已上线',
+    review:new Set(['安全','敏感']),
     cats:new Set(['Movies','TV Series']),
     play:new Set(['URL'])
   };
@@ -1086,11 +1088,12 @@ function renderAuto(){
     <div class="fitem"><label>语言</label>${msHTML('autoLang',cfg.langs,'全部',LANGS)}</div>
     <div class="fitem"><label>字幕语言</label>${msHTML('autoSub',cfg.subs,'全部',SUBS)}</div>
     <div class="fitem"><label>媒资状态</label><select class="inp" data-action="autoMStatus">${optHTML(['已上线','下线'],cfg.mStatus,'全部')}</select></div>
+    <div class="fitem"><label>审核结果</label>${msHTML('autoReview',cfg.review,'全部',AUTO_REVIEW)}</div>
     <div class="fitem"><label>分类</label>${msHTML('autoCat',cfg.cats,'全部',AUTO_CATS)}</div>
     <div class="fitem"><label>播放类型</label>${msHTML('autoPlay',cfg.play,'全部',AUTO_PLAY)}</div>
     <div class="fitem"><button class="btn primary" data-action="autoSave">保存配置</button></div>
   </div>
-  <div class="cfg-note">基础筛选条件配置决定每日自动聚合的候选媒资范围，保存后次日栏目池刷新生效。默认勾选：已部署 / 已上线 / Movies + TV Series（不勾 Live）/ URL。</div>`;
+  <div class="cfg-note">基础筛选条件配置决定每日自动聚合的候选媒资范围，保存后次日栏目池刷新生效。默认勾选：已部署 / 已上线 / 安全 + 敏感（不勾违规）/ Movies + TV Series（不勾 Live）/ URL。</div>`;
 
   // action bar
   const showBatch=state.autoStatus==='待确认';
