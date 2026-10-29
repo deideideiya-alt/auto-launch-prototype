@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>自动化上新 · 上新策略配置</title>
+<title>海外媒资 · 自动化工作台</title>
 <style>
   :root{
     --bg:#f5f6f8;
@@ -302,25 +302,61 @@
   .scard .v{font-size:20px;font-weight:700;color:var(--text);}
   .scard .l{font-size:11.5px;color:var(--text-3);margin-top:2px;}
   @media (max-width:780px){.content{padding:14px;}.toolbar{gap:8px;}}
+
+  /* ---------- Sidebar ---------- */
+  .shell{display:flex;min-height:100vh;}
+  .side{
+    width:216px;flex:0 0 216px;background:#0a1c2e;color:#b8c4d0;
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+    overflow-y:auto;padding-bottom:24px;
+  }
+  .side::-webkit-scrollbar{width:6px;}
+  .side::-webkit-scrollbar-thumb{background:#23384e;border-radius:3px;}
+  .side-brand{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;color:#fff;font-size:16px;font-weight:700;letter-spacing:.5px;}
+  .sitem{
+    display:flex;align-items:center;gap:11px;width:100%;padding:11px 16px;
+    border:none;background:none;color:#a7b5c2;font-size:13.5px;font-weight:500;
+    text-align:left;font-family:inherit;cursor:pointer;
+  }
+  .sitem svg{width:17px;height:17px;flex:0 0 auto;}
+  .sitem:hover{color:#fff;background:rgba(255,255,255,.05);}
+  .sitem.active{background:#2f81f7;color:#fff;}
+  .sitem.group{font-weight:600;color:#cdd8e2;}
+  .sitem.sub{padding-left:44px;background:rgba(255,255,255,.02);}
+  .sitem.sub:hover{background:rgba(255,255,255,.06);}
+  .sitem .chev{margin-left:auto;display:flex;transition:transform .15s;}
+  .sitem .chev svg{width:14px;height:14px;}
+  .sitem .chev.up{transform:rotate(180deg);}
+  .main-col{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .page-title{font-size:15px;font-weight:650;}
+  .colname{font-weight:650;}
+  .uv-cell{font-size:11px;color:var(--text-2);line-height:1.55;}
+  .cfg-note{font-size:11.5px;color:var(--text-3);margin:-4px 2px 12px;}
+  .rule-cell{color:var(--text-2);font-size:12px;}
+  .mcell{display:flex;align-items:center;gap:9px;}
+  .poster{width:30px;height:40px;border-radius:3px;flex:0 0 auto;box-shadow:var(--shadow);}
+  .score-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;}
+  .lnk{border:none;background:none;color:var(--blue);font-size:12px;font-weight:600;padding:2px 4px;cursor:pointer;}
+  .lnk.red{color:var(--red);}
+  .lnk:hover{text-decoration:underline;}
+  .pv-legend{margin:10px 20px 0;}
+  .pv-wrap{max-height:430px;}
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="app-header">
-    <div class="brand">
-      <div class="logo">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>
+<div class="shell">
+  <aside class="side" id="sidebar"></aside>
+  <div class="main-col">
+    <header class="app-header">
+      <div class="page-title" id="pageTitle">上新工作台</div>
+      <div class="header-meta" id="headerMeta">
       </div>
-      <span class="title">自动化上新</span>
-      <span class="sub">上新策略配置</span>
-    </div>
-    <div class="header-meta" id="headerMeta">
-    </div>
-  </header>
+    </header>
 
-  <nav class="top-tabs" id="topTabs"></nav>
+    <nav class="top-tabs" id="topTabs"></nav>
 
-  <main class="content" id="content"></main>
+    <main class="content" id="content"></main>
+  </div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -350,6 +386,35 @@ const PAYTYPES=['免费','VIP','单片付费'];
 const OPERATORS=['张敏','李强','王芳','刘洋','陈静','赵磊'];
 const STATUS_PIP={'待打标':'var(--amber)','待部署':'var(--blue)','已部署':'var(--green)','已下线':'var(--gray)','不予上线':'var(--red)'};
 const REGION_LANG={'US':['英语'],'AU':['英语'],'UK':['英语'],'IN':['印地语','英语'],'FR':['法语'],'DE':['德语'],'IT':['意大利语'],'BE':['法语','荷兰语'],'LATAM(除BR)':['西班牙语','葡萄牙语'],'BR':['葡萄牙语'],'ES':['西班牙语'],'PH':['英语','他加禄语'],'VN':['越南语'],'TH':['泰语'],'ID':['印尼语'],'MENA':['阿拉伯语'],'其它国家':['英语'],'LAE':['西班牙语']};
+
+/* ---------- 自动化工作台 constants ---------- */
+const AUTO_CATS=['Movies','TV Series','Live'];
+const AUTO_PLAY=['URL','DEEPLINK','WEBURL'];
+const AUTO_PROVIDERS=['Plex AVOD','filmHub','ITN Studios','Allrites','Tubi','Adrise','GlobalPix'];
+const AUTO_MS_MAP={autoDeploy:'deploy',autoLang:'langs',autoSub:'subs',autoCat:'cats',autoPlay:'play'};
+/* 标准标签池：[标签, 标签类别]（Genre Type / Subgenre / Topic / Element / Feel） */
+const TAG_POOL=[
+  ['犯罪','Genre'],['浪漫','Genre'],['喜剧','Genre'],['动作','Genre'],['恐怖','Genre'],['科幻','Genre'],['动画','Genre'],['冒险','Genre'],['剧情','Genre'],['奇幻','Genre'],
+  ['丧尸','Subgenre'],['赛博朋克','Subgenre'],['宫廷','Subgenre'],['校园','Subgenre'],['末世求生','Subgenre'],['谍战','Subgenre'],
+  ['大女主复仇','Topic'],['小人物逆袭','Topic'],['家族恩怨','Topic'],['侦探破案','Topic'],['时间循环','Topic'],
+  ['LGBT','Element'],['双生替身','Element'],['重生逆袭','Element'],
+  ['治愈','Feel'],['高燃','Feel'],['烧脑','Feel'],['甜宠','Feel'],['催泪','Feel']
+];
+/* 自动化栏目池（每日刷新模拟）：每个地区生成若干待确认栏目 */
+const AUTO_COLUMNS=[];
+REGIONS.forEach(rg=>{
+  const tags=shuffle(TAG_POOL).slice(0,5);
+  tags.forEach((t,i)=>{
+    const st=i<3?'待确认':(rng()<0.5?'已上线':'已忽略');
+    AUTO_COLUMNS.push({
+      id:randomId(),region:rg,tag:t[0],type:t[1],
+      count:7+Math.floor(rng()*194),st,
+      uvClick:1000+Math.floor(rng()*99000),
+      uvPlay:500+Math.floor(rng()*66000),
+      time:pastDateTime()
+    });
+  });
+});
 
 /* OA account (simulated logged-in account; region tab order is remembered per account) */
 const OA_ACCOUNTS=[{id:'zhangmin',name:'张敏'},{id:'liqiang',name:'李强'},{id:'wangfang',name:'王芳'}];
@@ -425,7 +490,11 @@ const state={
   recRegion:'',recStatus:'',recId:'',recTitle:'',recAvailCountry:'',recCat:'',recGenre:'',recProvider:'',recReview:'',recPay:'',
   recDateFrom:'',recDateTo:'',recOperator:'',recOnlineDate:'',
   recLangFilter:new Set(),recSubFilter:new Set(),recCountries:new Set(),
-  recColVis:{id:true,status:true,fromStatus:true,region:true,operator:true,time:true,countries:false,category:true,provider:true,review:false,inboundDate:false,payType:true,genre:true,language:true,subtitle:false}
+  recColVis:{id:true,status:true,fromStatus:true,region:true,operator:true,time:true,countries:false,category:true,provider:true,review:false,inboundDate:false,payType:true,genre:true,language:true,subtitle:false},
+  /* 页面级：launch=上新工作台 auto=自动化工作台 */
+  page:'launch',sideOpen:{rec:true},
+  autoRegion:'US',autoStatus:'待确认',autoPage:1,autoSelected:new Set(),autoCfg:{},
+  pvCol:null,pvPage:1
 };
 
 /* ---------- Icons ---------- */
@@ -917,6 +986,229 @@ function toast(msg,kind='ok'){
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},2600);
 }
 
+/* ---------- Sidebar ---------- */
+const SICON={
+  logo:'<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" stroke="none"><path d="M3.5 18L9.6 5.6l3.7 7 2.3-3.6L21 18H3.5z"/></svg>',
+  dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16a8 8 0 1 1 14 0"/><path d="M12 16l4.2-5.2"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>',
+  thumb:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.3a2 2 0 0 0 2-1.7l1.4-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  algo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3"/><path d="M13 15h4"/></svg>',
+  gearI:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+  mega:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 5l-11 4H4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3l11 4V5z"/><path d="M8.7 15.3L10 21h2l-1-5"/></svg>',
+  robot:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>',
+  video:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10.5l6-3v9l-6-3"/></svg>',
+  tagI:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4L12 22 2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.4"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V10M12 20V4M18 20v-7"/><path d="M3 20h18"/></svg>',
+  feed:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.4" fill="currentColor" stroke="none"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+};
+function renderSidebar(){
+  const pg=state.page;
+  const sub=(key,icon,label)=>`<button class="sitem sub ${pg===key?'active':''}" data-action="sideNav" data-v="${key}">${icon}<span>${label}</span></button>`;
+  let h=`<div class="side-brand">${SICON.logo}<span>海外媒资</span></div>`;
+  h+=`<button class="sitem" data-action="sideDemo">${SICON.dash}<span>Dashboard</span></button>`;
+  h+=`<button class="sitem group" data-action="sideGroup" data-v="rec">${SICON.thumb}<span>推荐管理</span><span class="chev ${state.sideOpen.rec?'up':''}">${SICON.chev}</span></button>`;
+  if(state.sideOpen.rec){
+    h+=sub('pkg',SICON.lock,'媒资包管理');
+    h+=sub('algo',SICON.algo,'推荐算法管理');
+    h+=sub('fallback',SICON.gearI,'兜底推荐管理');
+    h+=sub('launch',SICON.mega,'上新工作台');
+    h+=sub('auto',SICON.robot,'自动化工作台');
+  }
+  [['media','媒资管理',SICON.video],['tagm','标签管理',SICON.tagI],['data','数据管理',SICON.chart],['feed','Feed管理',SICON.feed],['search','搜索管理',SICON.search]].forEach(([k,l,ic])=>{
+    h+=`<button class="sitem group" data-action="sideGroup" data-v="${k}">${ic}<span>${l}</span><span class="chev">${SICON.chev}</span></button>`;
+  });
+  document.getElementById('sidebar').innerHTML=h;
+  document.getElementById('pageTitle').textContent=pg==='auto'?'自动化工作台':'上新工作台';
+}
+
+/* ---------- 自动化工作台 ---------- */
+function autoCfgFor(rg){
+  if(!state.autoCfg[rg])state.autoCfg[rg]={
+    country:rg,
+    deploy:new Set(['已部署']),
+    langs:new Set(),
+    subs:new Set(),
+    mStatus:'已上线',
+    cats:new Set(['Movies','TV Series']),
+    play:new Set(['URL'])
+  };
+  return state.autoCfg[rg];
+}
+function autoStBadge(st){
+  const cls=st==='待确认'?'b-wait':st==='已上线'?'b-done':'b-off';
+  const pip=st==='待确认'?'var(--amber)':st==='已上线'?'var(--green)':'var(--gray)';
+  return `<span class="badge ${cls}"><span class="pip" style="background:${pip}"></span>${st}</span>`;
+}
+function autoRows(){
+  let rows=AUTO_COLUMNS.filter(c=>c.region===state.autoRegion&&c.st===state.autoStatus);
+  const total=rows.length;const ps=10;const pages=Math.max(1,Math.ceil(total/ps));
+  if(state.autoPage>pages)state.autoPage=pages;
+  return {rows:rows.slice((state.autoPage-1)*ps,state.autoPage*ps),total,pages};
+}
+function autoColsFor2(){return AUTO_COLUMNS.filter(c=>c.region===state.autoRegion);}
+function renderAuto(){
+  const rg=state.autoRegion;
+  const cfg=autoCfgFor(rg);
+  document.getElementById('topTabs').style.display='none';
+
+  // country tabs（自动化栏目池分区）
+  let regionTabs='<div class="section-label">自动化栏目池 · 按国家 / 地区分区（栏目池每日自动刷新，最近刷新：今日 06:00）</div><div class="region-tabs">';
+  REGIONS.forEach(r=>{
+    const cnt=AUTO_COLUMNS.filter(c=>c.region===r&&c.st==='待确认').length;
+    regionTabs+=`<button class="region-tab ${r===rg?'active':''}" data-action="autoRegionTab" data-v="${r}">${r}<span class="rcnt">${cnt}</span></button>`;
+  });
+  regionTabs+='</div>';
+
+  // 聚合规则说明
+  const legend=`<div class="legend">${I.info}<div><b>自动化聚合规则：</b>基于标准标签（Genre Type / Subgenre / Topic / Element / Feel）聚合，栏目内媒资全部包含同一个 Genre 标签（如「犯罪」）或内容标签（如「大女主复仇」）；当 <b>7 ≤ 单栏目媒资数 ≤ 200</b> 时自动生成待确认栏目，超出 200 上限时按星云平台点击UV / 播放UV（国家 + 播放数据）取播放数据靠前的内容。栏目名自动采用该栏目下所有媒资共同的那个 Genre 标签或内容标签（如「浪漫」「大女主复仇」「丧尸」「LGBT」）。运营手动审核，点击【上线】后系统自动创建媒资包，并在 CMS 自动创建对应栏目。</div></div>`;
+
+  // summary cards
+  const stCnt=s=>AUTO_COLUMNS.filter(c=>c.region===rg&&c.st===s).length;
+  const cards=`<div class="summary-cards">
+    <div class="scard"><div class="v">${stCnt('待确认')}</div><div class="l">待确认栏目</div></div>
+    <div class="scard"><div class="v">${stCnt('已上线')}</div><div class="l">已上线栏目</div></div>
+    <div class="scard"><div class="v">${stCnt('已忽略')}</div><div class="l">已忽略栏目</div></div>
+  </div>`;
+
+  // status tabs
+  let statusTabs='<div class="status-tabs">';
+  ['待确认','已上线','已忽略'].forEach(s=>{
+    statusTabs+=`<button class="status-tab ${s===state.autoStatus?'active':''}" data-action="autoStatusTab" data-v="${s}">${s}<span class="scnt">${stCnt(s)}</span></button>`;
+  });
+  statusTabs+='</div>';
+
+  // 基础筛选条件配置
+  const toolbar=`<div class="toolbar">
+    <div class="fitem"><label>可用国家</label><select class="inp" data-action="autoCountry">${optHTML(REGIONS,cfg.country,'全部')}</select></div>
+    <div class="fitem"><label>部署状态</label>${msHTML('autoDeploy',cfg.deploy,'全部',['待打标','待部署','已部署','已下线'])}</div>
+    <div class="fitem"><label>语言</label>${msHTML('autoLang',cfg.langs,'全部',LANGS)}</div>
+    <div class="fitem"><label>字幕语言</label>${msHTML('autoSub',cfg.subs,'全部',SUBS)}</div>
+    <div class="fitem"><label>媒资状态</label><select class="inp" data-action="autoMStatus">${optHTML(['已上线','下线'],cfg.mStatus,'全部')}</select></div>
+    <div class="fitem"><label>分类</label>${msHTML('autoCat',cfg.cats,'全部',AUTO_CATS)}</div>
+    <div class="fitem"><label>播放类型</label>${msHTML('autoPlay',cfg.play,'全部',AUTO_PLAY)}</div>
+    <div class="fitem"><button class="btn primary" data-action="autoSave">保存配置</button></div>
+  </div>
+  <div class="cfg-note">基础筛选条件配置决定每日自动聚合的候选媒资范围，保存后次日栏目池刷新生效。默认勾选：已部署 / 已上线 / Movies + TV Series（不勾 Live）/ URL。</div>`;
+
+  // action bar
+  const showBatch=state.autoStatus==='待确认';
+  const actionbar=`<div class="actionbar">
+    ${showBatch?`<span class="sel-info">已选 <b id="autoSelCount">${state.autoSelected.size}</b> 项</span>
+    <button class="btn primary" data-action="autoBatchGo">批量上线</button>
+    <button class="btn danger-o" data-action="autoBatchIgnore">批量忽略</button>
+    <span class="archived-note">上线后自动创建媒资包，并在 CMS 自动创建对应栏目</span>`:''}
+    <div class="spacer"></div>
+  </div>`;
+
+  // table
+  const {rows,total,pages}=autoRows();
+  const head=[];
+  if(showBatch)head.push('<th style="width:34px"><input type="checkbox" class="chk" data-action="autoSelAll"></th>');
+  head.push('<th>栏目名称</th><th>命中标签</th><th>聚合规则</th><th>媒资数</th><th>播放数据（星云）</th><th>生成时间</th><th>状态</th><th style="width:250px">操作</th>');
+  const colspan=head.length;
+  let body='';
+  if(!rows.length){
+    body=`<tr><td colspan="${colspan}"><div class="empty">${I.empty}<div>暂无${state.autoStatus}栏目</div></div></td></tr>`;
+  }else{
+    rows.forEach(c=>{
+      let tds='';
+      if(showBatch)tds+=`<td><input type="checkbox" class="chk" data-action="autoSel" data-id="${c.id}" ${state.autoSelected.has(c.id)?'checked':''}></td>`;
+      tds+=`<td><span class="colname">${c.tag}</span></td>`;
+      tds+=`<td><span class="ctag ${c.type==='Genre'?'cur':''}">${c.type}</span></td>`;
+      tds+=`<td class="rule-cell">全部包含相同「${c.type==='Genre'?'Genre':'内容'}标签：${c.tag}」</td>`;
+      tds+=`<td><span class="prio">${c.count}</span></td>`;
+      tds+=`<td class="uv-cell">点击UV ${c.uvClick.toLocaleString()}<br>播放UV ${c.uvPlay.toLocaleString()}</td>`;
+      tds+=`<td>${c.time}</td>`;
+      tds+=`<td>${autoStBadge(c.st)}</td>`;
+      let ops=`<button class="op" data-action="pvOpen" data-id="${c.id}">${I.info}预览媒资</button>`;
+      if(c.st==='待确认'){
+        ops+=`<button class="op go" data-action="colGo" data-id="${c.id}">${I.go}上线</button>`;
+        ops+=`<button class="op off" data-action="colIgnore" data-id="${c.id}">${I.ban}忽略</button>`;
+      }
+      tds+=`<td><div class="ops">${ops}</div></td>`;
+      body+=`<tr>${tds}</tr>`;
+    });
+  }
+  // pager
+  const p=state.autoPage;
+  let pg=`<button class="pg" data-action="autoPg" data-v="${p-1}" ${p<=1?'disabled':''}>‹</button>`;
+  const win=[];const s=Math.max(1,p-2),e=Math.min(pages,p+2);
+  if(s>1){win.push(1);if(s>2)win.push('…');}
+  for(let i=s;i<=e;i++)win.push(i);
+  if(e<pages){if(e<pages-1)win.push('…');win.push(pages);}
+  win.forEach(v=>{if(v==='…')pg+=`<span class="pg" style="border:none;background:none">…</span>`;else pg+=`<button class="pg ${v===p?'active':''}" data-action="autoPg" data-v="${v}">${v}</button>`;});
+  pg+=`<button class="pg" data-action="autoPg" data-v="${p+1}" ${p>=pages?'disabled':''}>›</button>`;
+  const pager=`<div class="pager"><span class="info">共 <b>${total}</b> 条 · 每页 10 条</span><div class="pages">${pg}</div></div>`;
+
+  document.getElementById('content').innerHTML=regionTabs+legend+cards+statusTabs+toolbar+actionbar+`<div class="table-card"><div class="table-wrap"><table><thead><tr>${head.join('')}</tr></thead><tbody>${body}</tbody></table></div>${pager}</div>`;
+}
+
+/* ---------- 预览媒资包（待确认栏目详情） ---------- */
+function pvSeed(str){let h=1779033703;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return h>>>0;}
+function pvRows(col){
+  const r2=mulberry32(pvSeed(col.id));
+  const n=Math.min(col.count,30);
+  const rows=[];
+  const p=x=>String(x).padStart(2,'0');
+  for(let i=0;i<n;i++){
+    const name=NAMES[Math.floor(r2()*NAMES.length)]||('Title '+(i+1));
+    let vid='6ad';for(let k=0;k<14;k++)vid+='0123456789abcdef'[Math.floor(r2()*16)];
+    const review=r2()<0.6?'安全':'敏感';
+    const risk=review==='敏感'?(r2()<0.7?'AE-L2-轻度色情低俗-男女亲热':'AE-L1-轻度暴力'):'';
+    const dt=new Date(Date.now()-Math.floor(r2()*400)*86400000);
+    rows.push({
+      name,vid,
+      provider:AUTO_PROVIDERS[Math.floor(r2()*AUTO_PROVIDERS.length)],
+      review,risk,
+      score:(r2()*95+1).toFixed(14),
+      time:dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())+':'+p(dt.getSeconds()),
+      hue:Math.floor(r2()*360)
+    });
+  }
+  rows.sort((a,b)=>b.score-a.score); // 排序计算得分降序
+  return rows;
+}
+function pvModalHTML(col){
+  const PER=10;
+  const rows=pvRows(col);
+  const pages=Math.max(1,Math.ceil(rows.length/PER));
+  if(state.pvPage>pages)state.pvPage=pages;
+  const pageRows=rows.slice((state.pvPage-1)*PER,state.pvPage*PER);
+  let body='';
+  pageRows.forEach(m=>{
+    body+=`<tr>
+      <td><input type="checkbox" class="chk"></td>
+      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div></div></div></td>
+      <td>${m.provider}</td>
+      <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
+      <td>${m.risk?`<span class="risk-tag" title="${m.risk}">${m.risk}</span>`:'<span class="risk-none">无</span>'}</td>
+      <td class="score-cell">${m.score}</td>
+      <td>${m.time}</td>
+      <td><div class="ops"><button class="lnk" data-action="pvNoop">编辑</button><button class="lnk" data-action="pvNoop">详情</button><button class="lnk red" data-action="pvNoop">删除</button></div></td>
+    </tr>`;
+  });
+  return `<div class="am-head"><h3>预览媒资包 —「${col.tag}」（${col.region} · 共 ${col.count} 项）</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
+  <div class="legend pv-legend">${I.warn}<div>提示：中国政治类违规媒资系统将自动过滤，不可添加至媒资包</div></div>
+  <div class="am-table-wrap pv-wrap"><table><thead><tr>
+    <th style="width:34px"><input type="checkbox" class="chk"></th>
+    <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>风险标签</th><th>排序计算得分</th><th>入库时间</th><th style="width:130px">操作</th>
+  </tr></thead><tbody>${body}</tbody></table></div>
+  <div class="am-pager">
+    <span>显示 ${(state.pvPage-1)*PER+1} 至 ${Math.min(state.pvPage*PER,rows.length)} 项结果，共 ${rows.length} 项</span>
+    <select class="inp" style="height:30px"><option>10 条/页</option></select>
+    <button class="btn" data-action="pvPg" data-v="prev" ${state.pvPage<=1?'disabled':''}>上一页</button>
+    <span>第 ${state.pvPage} / ${pages} 页</span>
+    <button class="btn" data-action="pvPg" data-v="next" ${state.pvPage>=pages?'disabled':''}>下一页</button>
+  </div>`;
+}
+function renderPvModal(){
+  const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);if(!col)return;
+  const m=document.getElementById('modal');m.className='modal wide';m.innerHTML=pvModalHTML(col);
+  document.getElementById('overlay').classList.add('open');
+}
+
 /* ---------- Event delegation ---------- */
 document.addEventListener('click',e=>{
   // close multiselects if open and click outside
@@ -930,7 +1222,12 @@ document.addEventListener('click',e=>{
   if(a==='status'){state.status=v;state.selected.clear();state.page=1;render();return;}
 
   if(a==='msToggle'){state.openMs=(state.openMs===mskey)?null:mskey;if(state.amOpen){renderAmModal();}else{render();}return;}
-  if(a==='msClear'){const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};if(map[mskey])state[map[mskey]].clear();render();return;}
+  if(a==='msClear'){
+    const map={lang:'langFilter',sub:'subFilter',recLang:'recLangFilter',recSub:'recSubFilter',recCountries:'recCountries'};
+    if(map[mskey])state[map[mskey]].clear();
+    if(AUTO_MS_MAP[mskey])autoCfgFor(state.autoRegion)[AUTO_MS_MAP[mskey]].clear();
+    render();return;
+  }
   if(a==='msDone'){state.openMs=null;render();return;}
 
   if(a==='query'){state.page=1;render();toast('已按当前条件查询');return;}
@@ -1020,6 +1317,51 @@ document.addEventListener('click',e=>{
 
   if(a==='closeModal'){closeModal();return;}
 
+  /* ----- 侧边栏 ----- */
+  if(a==='sideNav'){state.page=v;state.autoSelected.clear();state.openMs=null;closeModal();render();return;}
+  if(a==='sideGroup'){
+    if(v==='rec'){state.sideOpen.rec=!state.sideOpen.rec;render();}
+    else toast('原型演示：「'+(SIDE_PLACEHOLDER[v]||v)+'」模块本次未开放','info');
+    return;
+  }
+  if(a==='sideDemo'){toast('原型演示：Dashboard 模块本次未开放','info');return;}
+
+  /* ----- 自动化工作台 ----- */
+  if(a==='autoRegionTab'){state.autoRegion=v;state.autoStatus='待确认';state.autoPage=1;state.autoSelected.clear();render();return;}
+  if(a==='autoStatusTab'){state.autoStatus=v;state.autoPage=1;state.autoSelected.clear();render();return;}
+  if(a==='autoSave'){toast('基础筛选条件已保存，次日栏目池刷新生效');return;}
+  if(a==='autoSelAll'){const {rows}=autoRows();if(el.checked)rows.forEach(c=>state.autoSelected.add(c.id));else rows.forEach(c=>state.autoSelected.delete(c.id));render();return;}
+  if(a==='autoSel'){if(el.checked)state.autoSelected.add(id);else state.autoSelected.delete(id);const sc=document.getElementById('autoSelCount');if(sc)sc.textContent=state.autoSelected.size;return;}
+  if(a==='autoPg'){const n=+v;if(n>=1){state.autoPage=n;render();}return;}
+  if(a==='pvOpen'){state.pvCol=id;state.pvPage=1;renderPvModal();return;}
+  if(a==='pvPg'){
+    const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+    const pages=Math.max(1,Math.ceil(Math.min(col.count,30)/10));
+    if(v==='prev')state.pvPage=Math.max(1,state.pvPage-1);
+    else if(v==='next')state.pvPage=Math.min(pages,state.pvPage+1);
+    renderPvModal();return;
+  }
+  if(a==='pvNoop'){toast('原型演示：该操作本次未开放','info');return;}
+  if(a==='colGo'){
+    const col=AUTO_COLUMNS.find(c=>c.id===id);
+    openModal(`<div class="warn-ico" style="background:var(--accent-soft);color:var(--accent-d)">${I.go}</div><h3>确认上线栏目「${col.tag}」？</h3><p>上线后将自动完成：<br>1. 创建媒资包（${col.count} 项媒资 · ${col.region}）；<br>2. 在 CMS 自动创建对应栏目「${col.tag}」。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn primary" data-action="confirmColGo" data-id="${id}">确认上线</button></div>`);
+    return;
+  }
+  if(a==='confirmColGo'){const col=AUTO_COLUMNS.find(c=>c.id===id);col.st='已上线';state.autoSelected.delete(id);closeModal();toast('已上线：'+col.tag+'（'+col.region+'），媒资包与 CMS 栏目已自动创建');render();return;}
+  if(a==='colIgnore'){const col=AUTO_COLUMNS.find(c=>c.id===id);col.st='已忽略';state.autoSelected.delete(id);toast('已忽略栏目：'+col.tag,'info');render();return;}
+  if(a==='autoBatchGo'){
+    const sel=autoColsFor2().filter(c=>state.autoSelected.has(c.id)&&c.st==='待确认');
+    if(!sel.length){toast('请先选择待确认栏目','info');return;}
+    sel.forEach(c=>c.st='已上线');const n=sel.length;state.autoSelected.clear();
+    toast('批量上线完成：'+n+' 个栏目，媒资包与 CMS 栏目已自动创建');render();return;
+  }
+  if(a==='autoBatchIgnore'){
+    const sel=autoColsFor2().filter(c=>state.autoSelected.has(c.id)&&c.st==='待确认');
+    if(!sel.length){toast('请先选择待确认栏目','info');return;}
+    sel.forEach(c=>c.st='已忽略');const n=sel.length;state.autoSelected.clear();
+    toast('批量忽略完成：'+n+' 个栏目已忽略','info');render();return;
+  }
+
   // records filters
   if(a==='recRegionTab'){state.recRegion=(v==='')?'':v;render();return;}
   if(a==='recQuery'){render();toast('已按当前条件查询');return;}
@@ -1064,8 +1406,11 @@ document.addEventListener('change',e=>{
   if(a==='amLevel'){state.amLevel=el.value;return;}
   if(a==='amLang'){state.amLang=el.value;return;}
   if(a==='amSub'){state.amSub=el.value;return;}
+  if(a==='autoCountry'){autoCfgFor(state.autoRegion).country=el.value;return;}
+  if(a==='autoMStatus'){autoCfgFor(state.autoRegion).mStatus=el.value;return;}
   if(a==='ms'){
     const ms=el.dataset.ms;
+    if(AUTO_MS_MAP[ms]){const cfg=autoCfgFor(state.autoRegion);const set=cfg[AUTO_MS_MAP[ms]];if(el.checked)set.add(el.value);else set.delete(el.value);return;}
     if(ms==='poolCols'){state.colVis[el.value]=el.checked;render();return;}
     if(ms==='recCols'){state.recColVis[el.value]=el.checked;render();return;}
     if(ms==='amPlay'){if(el.checked)state.amPlay.add(el.value);else state.amPlay.delete(el.value);renderAmModal();return;}
@@ -1088,9 +1433,16 @@ document.addEventListener('input',e=>{
 });
 
 function render(){
+  renderSidebar();
   renderHeader();
-  renderTopTabs();
-  if(state.topTab==='pool')renderPool();else renderRecords();
+  if(state.page==='auto'){
+    document.getElementById('topTabs').style.display='none';
+    renderAuto();
+  }else{
+    document.getElementById('topTabs').style.display='flex';
+    renderTopTabs();
+    if(state.topTab==='pool')renderPool();else renderRecords();
+  }
 }
 
 /* ---------- Drag-to-reorder region tabs (persisted per OA account) ---------- */
