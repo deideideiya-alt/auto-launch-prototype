@@ -627,7 +627,7 @@ function renderTable(rows,total){
       if(row.status==='待打标'||row.status==='待部署'){
         ops=`<button class="op go" data-action="go" data-id="${a.id}" data-r="${r}">${I.go}上线</button><button class="op off" data-action="reject" data-id="${a.id}" data-r="${r}">${I.ban}不予上线</button>`;
       }else if(row.status==='已部署'){
-        ops=`<button class="op off" data-action="down" data-id="${a.id}" data-r="${r}">${I.down}下线</button><button class="op off" data-action="reject" data-id="${a.id}" data-r="${r}">${I.ban}不予上线</button>`;
+        ops=`<button class="op off" data-action="down" data-id="${a.id}" data-r="${r}">${I.go}上线</button><button class="op off" data-action="reject" data-id="${a.id}" data-r="${r}">${I.ban}不予上线</button>`;
       }
       let tds=`<td><input type="checkbox" class="chk" data-action="sel" data-id="${a.id}" ${sel}></td>`;
       COLDEFS.forEach(([k])=>{if(state.colVis[k])tds+=`<td>${cellHTML(k,a,row)}</td>`;});
