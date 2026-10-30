@@ -250,7 +250,8 @@
   .cfg-hint{font-size:11px;color:var(--text-3);margin-top:5px;}
 
   /* 上线弹窗 radio */
-  .radio-card{margin:2px 26px 14px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .radio-title{font-size:12.5px;font-weight:650;color:var(--text);margin:14px 26px 7px;}
+  .radio-card{margin:0 26px 6px;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
   .radio-line{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
   .radio-line:last-child{border-bottom:none;}
   .radio-line:hover{background:var(--surface-2);}
@@ -358,7 +359,13 @@
   .colname{font-weight:650;}
   .uv-cell{font-size:11px;color:var(--text-2);line-height:1.55;}
   .cfg-note{font-size:11.5px;color:var(--text-3);margin:-4px 2px 12px;}
+  .info-wrap{position:relative;display:inline-flex;align-items:center;vertical-align:-2px;margin-left:4px;}
+  .info-ic{width:13px;height:13px;color:var(--text-3);}
+  .info-wrap:hover .info-ic{color:var(--blue);}
+  .info-tip{position:absolute;bottom:calc(100% + 7px);left:-4px;width:220px;background:#1f2733;color:#fff;font-size:11px;font-weight:500;line-height:1.55;padding:7px 9px;border-radius:6px;opacity:0;visibility:hidden;transition:opacity .15s;z-index:50;box-shadow:var(--shadow-pop);white-space:normal;}
+  .info-wrap:hover .info-tip{opacity:1;visibility:visible;}
   .rule-cell{color:var(--text-2);font-size:12px;}
+  .cnt-sub{font-size:10.5px;color:var(--text-3);line-height:1.5;margin-top:3px;white-space:nowrap;}
   .mcell{display:flex;align-items:center;gap:9px;}
   .poster{width:30px;height:40px;border-radius:3px;flex:0 0 auto;box-shadow:var(--shadow);}
   .score-cell{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;}
@@ -367,6 +374,12 @@
   .lnk:hover{text-decoration:underline;}
   .pv-legend{margin:10px 20px 0;}
   .pv-wrap{max-height:430px;}
+  .pv-filters{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:12px 20px 4px;}
+  .pv-fitem{display:flex;flex-direction:column;gap:5px;}
+  .pv-fitem>label{font-size:12px;color:var(--text-2);font-weight:500;}
+  .pv-fitem .inp{height:32px;}
+  .pv-fbtns{display:flex;gap:8px;margin-left:auto;}
+  .pv-count{font-size:12px;color:var(--text-2);margin:10px 20px 6px;}
 </style>
 </head>
 <body>
@@ -435,11 +448,12 @@ REGIONS.forEach(rg=>{
   const tags=shuffle(TAG_POOL).slice(0,5);
   tags.forEach((t,i)=>{
     const st=i<3?'待确认':(rng()<0.5?'已上线':'已忽略');
+    const cnt=7+Math.floor(rng()*194);
+    const subMatch=Math.max(1,Math.floor(cnt*(0.12+rng()*0.18))); // 仅字幕语言匹配
     AUTO_COLUMNS.push({
       id:randomId(),region:rg,tag:t[0],type:t[1],
-      count:7+Math.floor(rng()*194),st,
-      uvClick:1000+Math.floor(rng()*99000),
-      uvPlay:500+Math.floor(rng()*66000),
+      count:cnt,st,
+      langMatch:cnt-subMatch,subMatch,
       time:pastDateTime()
     });
   });
@@ -523,7 +537,7 @@ const state={
   /* 页面级：launch=上新工作台 auto=自动栏目工作台 */
   page:'launch',sideOpen:{rec:true},
   autoRegion:'US',autoStatus:'待确认',autoPage:1,autoSelected:new Set(),autoCfg:{},
-  pvCol:null,pvPage:1,
+  pvCol:null,pvPage:1,pvF:{title:'',id:'',provider:'',review:''},
   cfgSel:null
 };
 
@@ -1054,6 +1068,7 @@ function renderSidebar(){
 }
 
 /* ---------- 自动化工作台 ---------- */
+const OR_INFO='<span class="info-wrap"><svg class="info-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="info-tip">【语言】和【字幕语言】的筛选条件是「或」的关系，其余筛选条件为「且」的关系。</span></span>';
 function autoCfgFor(rg){
   if(!state.autoCfg[rg])state.autoCfg[rg]={
     country:rg,
@@ -1121,15 +1136,15 @@ function renderAuto(){
   const toolbar=`<div class="toolbar">
     <div class="fitem"><label>可用国家</label><select class="inp" data-action="autoCountry">${optHTML(REGIONS,cfg.country,'全部')}</select></div>
     <div class="fitem"><label>部署状态</label>${msHTML('autoDeploy',cfg.deploy,'全部',['待打标','待部署','已部署','已下线'])}</div>
-    <div class="fitem"><label>语言</label>${msHTML('autoLang',cfg.langs,'全部',LANGS)}</div>
-    <div class="fitem"><label>字幕语言</label>${msHTML('autoSub',cfg.subs,'全部',SUBS)}</div>
+    <div class="fitem"><label>语言${OR_INFO}</label>${msHTML('autoLang',cfg.langs,'全部',LANGS)}</div>
+    <div class="fitem"><label>字幕语言${OR_INFO}</label>${msHTML('autoSub',cfg.subs,'全部',SUBS)}</div>
     <div class="fitem"><label>媒资状态</label><select class="inp" data-action="autoMStatus">${optHTML(['上线','下线'],cfg.mStatus,'全部')}</select></div>
     <div class="fitem"><label>审核结果</label>${msHTML('autoReview',cfg.review,'全部',AUTO_REVIEW)}</div>
     <div class="fitem"><label>分类</label>${msHTML('autoCat',cfg.cats,'全部',AUTO_CATS)}</div>
     <div class="fitem"><label>播放类型</label>${msHTML('autoPlay',cfg.play,'全部',AUTO_PLAY)}</div>
     <div class="fitem"><button class="icon-btn" data-action="cfgOpen" title="自定义配置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></button></div>
   </div>
-  <div class="cfg-note">基础筛选条件配置决定每日自动聚合的候选媒资范围，保存后次日栏目池刷新生效。默认勾选：已部署 / 上线 / 安全 + 敏感 / Movies + TV Series（不勾 Live）/ URL。点击扳手图标可自定义聚合标签与组合逻辑。</div>`;
+  <div class="cfg-note">基础筛选条件配置决定每日自动聚合的候选媒资范围，保存后次日栏目池刷新生效。默认勾选：已部署 / 上线 / 安全 + 敏感 / Movies + TV Series（不勾 Live）/ URL；【语言】和【字幕语言】的筛选条件是「或」的关系，其余为「且」。点击扳手图标可自定义聚合标签与组合逻辑。</div>`;
 
   // action bar
   const showBatch=state.autoStatus==='待确认';
@@ -1156,7 +1171,7 @@ function renderAuto(){
       if(showBatch)tds+=`<td><input type="checkbox" class="chk" data-action="autoSel" data-id="${c.id}" ${state.autoSelected.has(c.id)?'checked':''}></td>`;
       tds+=`<td><span class="colname">${c.tag}</span></td>`;
       tds+=`<td class="rule-cell">${c.type}：${c.tag}</td>`;
-      tds+=`<td><span class="prio">${c.count}</span></td>`;
+      tds+=`<td><span class="prio">${c.count}</span><div class="cnt-sub">语言匹配：${c.langMatch}<br>字幕语言媒资匹配：${c.subMatch}</div></td>`;
       tds+=`<td>${c.time}</td>`;
       tds+=`<td>${autoStBadge(c.st)}</td>`;
       let ops=`<button class="op" data-action="pvOpen" data-id="${c.id}">${I.info}预览媒资</button>`;
@@ -1184,7 +1199,7 @@ function renderAuto(){
 
 /* ---------- 预览媒资包（待确认栏目详情） ---------- */
 function pvSeed(str){let h=1779033703;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return h>>>0;}
-function pvRows(col){
+function pvAllRows(col){
   const r2=mulberry32(pvSeed(col.id));
   const n=Math.min(col.count,30);
   const rows=[];
@@ -1204,8 +1219,17 @@ function pvRows(col){
       hue:Math.floor(r2()*360)
     });
   }
-  rows.sort((a,b)=>b.score-a.score); // 排序计算得分降序
+  rows.sort((a,b)=>b.score-a.score); // 仍按星的排序得分降序，只是不再展示该列
   return rows;
+}
+function pvRows(col){
+  return pvAllRows(col).filter(m=>{
+    if(state.pvF.title&&!m.name.toLowerCase().includes(state.pvF.title.toLowerCase()))return false;
+    if(state.pvF.id&&!m.vid.toLowerCase().includes(state.pvF.id.toLowerCase()))return false;
+    if(state.pvF.provider&&m.provider!==state.pvF.provider)return false;
+    if(state.pvF.review&&m.review!==state.pvF.review)return false;
+    return true;
+  });
 }
 function pvModalHTML(col){
   const PER=10;
@@ -1221,16 +1245,25 @@ function pvModalHTML(col){
       <td>${m.provider}</td>
       <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
       <td>${m.risk?`<span class="risk-tag" title="${m.risk}">${m.risk}</span>`:'<span class="risk-none">无</span>'}</td>
-      <td class="score-cell">${m.score}</td>
-      <td>${m.time}</td>
       <td><div class="ops"><button class="lnk" data-action="pvNoop">编辑</button><button class="lnk" data-action="pvNoop">详情</button><button class="lnk red" data-action="pvNoop">删除</button></div></td>
     </tr>`;
   });
+  if(!rows.length){body=`<tr><td colspan="6"><div class="empty">${I.empty}<div>未找到匹配媒资</div></div></td></tr>`;}
+  const fitem=(label,ctrl)=>`<div class="pv-fitem"><label>${label}</label>${ctrl}</div>`;
+  const pvFilters=`<div class="pv-filters">
+    ${fitem('媒资标题',`<input class="inp" data-action="pvTitle" placeholder="请输入媒资标题" value="${state.pvF.title}">`)}
+    ${fitem('媒资ID',`<input class="inp" data-action="pvId" placeholder="VideoID" value="${state.pvF.id}">`)}
+    ${fitem('内容商',`<select class="inp" data-action="pvProvider">${optHTML(AUTO_PROVIDERS,state.pvF.provider,'全部')}</select>`)}
+    ${fitem('审核结果',`<select class="inp" data-action="pvReview">${optHTML(['安全','敏感'],state.pvF.review,'全部')}</select>`)}
+    <div class="pv-fbtns"><button class="btn primary" data-action="pvQuery">查 询</button><button class="btn" data-action="pvReset">重 置</button></div>
+  </div>`;
   return `<div class="am-head"><h3>预览媒资包 —「${col.tag}」（${col.region} · 共 ${col.count} 项）</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
   <div class="legend pv-legend">${I.warn}<div>提示：中国政治类违规媒资系统将自动过滤，不可添加至媒资包</div></div>
+  ${pvFilters}
+  <div class="pv-count">共找到 <b>${rows.length}</b> 条媒资</div>
   <div class="am-table-wrap pv-wrap"><table><thead><tr>
     <th style="width:34px"><input type="checkbox" class="chk"></th>
-    <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>风险标签</th><th>排序计算得分</th><th>入库时间</th><th style="width:130px">操作</th>
+    <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>风险标签</th><th style="width:130px">操作</th>
   </tr></thead><tbody>${body}</tbody></table></div>
   <div class="am-pager">
     <span>显示 ${(state.pvPage-1)*PER+1} 至 ${Math.min(state.pvPage*PER,rows.length)} 项结果，共 ${rows.length} 项</span>
@@ -1427,9 +1460,18 @@ document.addEventListener('click',e=>{
     renderPvModal();return;
   }
   if(a==='pvNoop'){toast('原型演示：该操作本次未开放','info');return;}
+  if(a==='pvQuery'){state.pvPage=1;renderPvModal();return;}
+  if(a==='pvReset'){state.pvF={title:'',id:'',provider:'',review:''};state.pvPage=1;renderPvModal();return;}
   if(a==='colGo'){
     const col=AUTO_COLUMNS.find(c=>c.id===id);
-    openModal(`<div class="warn-ico" style="background:var(--accent-soft);color:var(--accent-d)">${I.go}</div><h3>确认上线栏目「${col.tag}」？</h3><p>上线后将自动完成：<br>1. 创建媒资包（${col.count} 项媒资 · ${col.region}）；<br>2. 在 CMS 自动创建对应栏目「${col.tag}」。</p><div class="radio-card">
+    openModal(`<div class="warn-ico" style="background:var(--accent-soft);color:var(--accent-d)">${I.go}</div><h3>确认上线栏目「${col.tag}」？</h3><p>上线后将自动完成：<br>1. 创建媒资包（${col.count} 项媒资 · ${col.region}）；<br>2. 在 CMS 自动创建对应栏目「${col.tag}」。</p>
+    <div class="radio-title">生成泳道</div>
+    <div class="radio-card">
+      <label class="radio-line"><input type="radio" name="laneType" value="横版" checked><span><b>横版泳道</b><small>按横版封面生成该栏目的推荐泳道</small></span></label>
+      <label class="radio-line"><input type="radio" name="laneType" value="竖版"><span><b>竖版泳道</b><small>按竖版封面生成该栏目的推荐泳道</small></span></label>
+    </div>
+    <div class="radio-title">媒资包过滤</div>
+    <div class="radio-card">
       <label class="radio-line"><input type="radio" name="subFilterMode" value="keep" checked><span><b>保留全部媒资</b><small>按聚合结果直接生成媒资包</small></span></label>
       <label class="radio-line"><input type="radio" name="subFilterMode" value="drop"><span><b>剔除仅字幕匹配的媒资</b><small>过滤剔除仅字幕匹配的媒资后，生成最终媒资包</small></span></label>
     </div><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn primary" data-action="confirmColGo" data-id="${id}">确认上线</button></div>`);
@@ -1439,8 +1481,10 @@ document.addEventListener('click',e=>{
     const col=AUTO_COLUMNS.find(c=>c.id===id);
     const modeEl=document.querySelector('input[name="subFilterMode"]:checked');
     const drop=modeEl&&modeEl.value==='drop';
+    const laneEl=document.querySelector('input[name="laneType"]:checked');
+    const lane=laneEl?laneEl.value:'横版';
     col.st='已上线';state.autoSelected.delete(id);closeModal();
-    toast('已上线：'+col.tag+'（'+col.region+'），媒资包与 CMS 栏目已自动创建'+(drop?'（已剔除仅字幕匹配的媒资）':''));
+    toast('已上线：'+col.tag+'（'+col.region+'），媒资包与 CMS 栏目已自动生成，'+lane+'泳道已创建'+(drop?'（已剔除仅字幕匹配的媒资）':''));
     render();return;
   }
   if(a==='colIgnore'){const col=AUTO_COLUMNS.find(c=>c.id===id);col.st='已忽略';state.autoSelected.delete(id);toast('已忽略栏目：'+col.tag,'info');render();return;}
@@ -1503,6 +1547,8 @@ document.addEventListener('change',e=>{
   if(a==='amSub'){state.amSub=el.value;return;}
   if(a==='autoCountry'){autoCfgFor(state.autoRegion).country=el.value;return;}
   if(a==='autoMStatus'){autoCfgFor(state.autoRegion).mStatus=el.value;return;}
+  if(a==='pvProvider'){state.pvF.provider=el.value;state.pvPage=1;renderPvModal();return;}
+  if(a==='pvReview'){state.pvF.review=el.value;state.pvPage=1;renderPvModal();return;}
   if(a==='cfgTag'){const s=state.cfgSel[el.dataset.cat].tags;if(el.checked)s.add(el.value);else s.delete(el.value);renderCfgModal();return;}
   if(a==='ms'){
     const ms=el.dataset.ms;
@@ -1526,6 +1572,11 @@ document.addEventListener('input',e=>{
     st=setTimeout(()=>{state[a]=el.value;render();},250);
   }
   if(a==='amTitle'||a==='amId'){state[a]=el.value;}
+  if(a==='pvTitle'||a==='pvId'){
+    clearTimeout(st);
+    const key=a==='pvTitle'?'title':'id';
+    st=setTimeout(()=>{state.pvF[key]=el.value;state.pvPage=1;renderPvModal();},300);
+  }
 });
 
 function render(){
