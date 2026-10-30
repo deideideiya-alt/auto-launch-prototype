@@ -121,6 +121,10 @@
   .status-tab.active{background:var(--surface-2);color:var(--text);}
   .status-tab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);}
   .status-tab .scnt{font-size:11px;font-weight:700;border-radius:9px;padding:0 7px;background:var(--gray-bg);color:var(--text-2);}
+  .st-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px;vertical-align:middle;flex:0 0 auto;}
+  .st-dot.wait{background:#f59e0b;}
+  .st-dot.done{background:#1a7f4b;}
+  .st-dot.off{background:var(--blue);}
   .status-tab .pip{width:7px;height:7px;border-radius:50%;}
 
   /* Toolbar */
@@ -1108,7 +1112,8 @@ function renderAuto(){
   // status tabs
   let statusTabs='<div class="status-tabs">';
   ['待确认','已上线','已忽略'].forEach(s=>{
-    statusTabs+=`<button class="status-tab ${s===state.autoStatus?'active':''}" data-action="autoStatusTab" data-v="${s}">${s}<span class="scnt">${stCnt(s)}</span></button>`;
+    const dotCls=s==='待确认'?'wait':s==='已上线'?'done':'off';
+    statusTabs+=`<button class="status-tab ${s===state.autoStatus?'active':''}" data-action="autoStatusTab" data-v="${s}"><span class="st-dot ${dotCls}"></span>${s}<span class="scnt">${stCnt(s)}</span></button>`;
   });
   statusTabs+='</div>';
 
