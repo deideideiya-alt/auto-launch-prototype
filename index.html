@@ -488,8 +488,11 @@ for(let i=0;i<NAMES.length;i++){
   const statusByRegion={};
   chosen.forEach(r=>{statusByRegion[r]=weightedStatus();});
   const primary=chosen[0];
+  let _vid='6ad';for(let _k=0;_k<14;_k++)_vid+='0123456789abcdef'[Math.floor(rng()*16)];
   assets.push({
     id:randomId(),name:NAMES[i],countries:chosen,
+    videoId:_vid,
+    bundleId:rng()<0.75?('XU'+(100000+Math.floor(rng()*900000))):'',
     category:pick(CATS),provider:pick(PROVIDERS),priority:1+Math.floor(rng()*5),
     review:rng()<0.75?'安全':'敏感',
     risk:rng()<0.7?'无':(rng()<0.5?'L2-中度色情低俗':'L1-轻度暴力'),
@@ -685,7 +688,10 @@ function getRows(){
     .map(a=>({asset:a,region:r,status:a.statusByRegion[r]}));
   rows=rows.filter(row=>{
     const a=row.asset;if(!a)return false;
-    if(state.fId && !a.id.toLowerCase().includes(state.fId.toLowerCase()))return false;
+    if(state.fId){
+      const q=state.fId.toLowerCase();
+      if(!(a.id.toLowerCase().includes(q)||(a.videoId||'').toLowerCase().includes(q)||(a.bundleId||'').toLowerCase().includes(q)))return false;
+    }
     if(state.fTitle && !a.name.toLowerCase().includes(state.fTitle.toLowerCase()))return false;
     if(state.fCountry && !a.countries.includes(state.fCountry))return false;
     if(state.fCat && a.category!==state.fCat)return false;
@@ -711,7 +717,10 @@ function badge(s){return `<span class="badge b-${s==='待打标'?'wait':s==='待
 function cellHTML(k,a,row){
   const r=row.region;
   switch(k){
-    case 'id':return `<div class="mname">${a.name}</div><div class="mid">${a.id}</div>`;
+    case 'id':{
+      const vid=a.videoId||a.id;
+      return `<div class="mname">${a.name}</div><div class="mid">VideoID:${vid}</div>`+(a.bundleId?`<div class="mid">BundleID:${a.bundleId}</div>`:'');
+    }
     case 'status':return badge(row.status);
     case 'countries':return `<div class="countries">${a.countries.map(c=>`<span class="ctag ${c===r?'cur':''}">${c}</span>`).join('')}</div>`;
     case 'category':return a.category;
@@ -780,7 +789,11 @@ function getRecRows(){
   if(state.recCountries.size)rows=rows.filter(x=>state.recCountries.has(x.region));
   rows=rows.filter(x=>{
     const a=assetById(x.assetId);
-    if(state.recId && !x.assetId.toLowerCase().includes(state.recId.toLowerCase()))return false;
+    if(state.recId){
+      const q=state.recId.toLowerCase();
+      const _a=assetById(x.assetId)||{};
+      if(!(x.assetId.toLowerCase().includes(q)||(_a.videoId||'').toLowerCase().includes(q)||(_a.bundleId||'').toLowerCase().includes(q)))return false;
+    }
     if(state.recTitle && !x.name.toLowerCase().includes(state.recTitle.toLowerCase()))return false;
     if(state.recAvailCountry && !(a&&a.countries.includes(state.recAvailCountry)))return false;
     if(state.recCat && (!a||a.category!==state.recCat))return false;
@@ -803,7 +816,10 @@ function getRecRows(){
 function recCellHTML(k,rec){
   const a=assetById(rec.assetId);
   switch(k){
-    case 'id':return `<div class="mname">${rec.name}</div><div class="mid">${rec.assetId}</div>`;
+    case 'id':{
+      const _a=assetById(rec.assetId)||{};
+      return `<div class="mname">${rec.name}</div><div class="mid">VideoID:${_a.videoId||rec.assetId}</div>`+(_a.bundleId?`<div class="mid">BundleID:${_a.bundleId}</div>`:'');
+    }
     case 'status':return badge('已下线');
     case 'fromStatus':return badge(rec.fromStatus);
     case 'region':return `<span class="ctag cur">${rec.region}</span>`;
@@ -1211,11 +1227,12 @@ function pvAllRows(col){
   for(let i=0;i<n;i++){
     const name=NAMES[Math.floor(r2()*NAMES.length)]||('Title '+(i+1));
     let vid='6ad';for(let k=0;k<14;k++)vid+='0123456789abcdef'[Math.floor(r2()*16)];
+    const bundleId=r2()<0.75?('XU'+(100000+Math.floor(r2()*900000))):'';
     const review=r2()<0.6?'安全':'敏感';
     const risk=review==='敏感'?(r2()<0.7?'AE-L2-轻度色情低俗-男女亲热':'AE-L1-轻度暴力'):'';
     const dt=new Date(Date.now()-Math.floor(r2()*400)*86400000);
     rows.push({
-      name,vid,
+      name,vid,bundleId,
       provider:AUTO_PROVIDERS[Math.floor(r2()*AUTO_PROVIDERS.length)],
       review,risk,
       score:(r2()*95+1).toFixed(14),
@@ -1234,7 +1251,10 @@ function pvPackRows(col){
 function pvRows(col){
   return pvPackRows(col).filter(m=>{
     if(state.pvF.title&&!m.name.toLowerCase().includes(state.pvF.title.toLowerCase()))return false;
-    if(state.pvF.id&&!m.vid.toLowerCase().includes(state.pvF.id.toLowerCase()))return false;
+    if(state.pvF.id){
+      const q=state.pvF.id.toLowerCase();
+      if(!(m.vid.toLowerCase().includes(q)||(m.bundleId||'').toLowerCase().includes(q)))return false;
+    }
     if(state.pvF.provider&&m.provider!==state.pvF.provider)return false;
     if(state.pvF.review&&m.review!==state.pvF.review)return false;
     return true;
@@ -1252,7 +1272,7 @@ function pvModalHTML(col){
   pageRows.forEach(m=>{
     body+=`<tr>
       <td><input type="checkbox" class="chk" data-action="pvSel" data-id="${m.vid}" ${state.pvSel.has(m.vid)?'checked':''}></td>
-      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div></div></div></td>
+      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div>${m.bundleId?`<div class="mid">BundleID:${m.bundleId}</div>`:''}</div></div></td>
       <td>${m.provider}</td>
       <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
       <td>${m.risk?`<span class="risk-tag" title="${m.risk}">${m.risk}</span>`:'<span class="risk-none">无</span>'}</td>
@@ -1263,7 +1283,7 @@ function pvModalHTML(col){
   const fitem=(label,ctrl)=>`<div class="pv-fitem"><label>${label}</label>${ctrl}</div>`;
   const pvFilters=`<div class="pv-filters">
     ${fitem('媒资标题',`<input class="inp" data-action="pvTitle" placeholder="请输入媒资标题" value="${state.pvF.title}">`)}
-    ${fitem('媒资ID',`<input class="inp" data-action="pvId" placeholder="VideoID" value="${state.pvF.id}">`)}
+    ${fitem('媒资ID',`<input class="inp" data-action="pvId" placeholder="VideoID/BundleID" value="${state.pvF.id}">`)}
     ${fitem('内容商',`<select class="inp" data-action="pvProvider">${optHTML(AUTO_PROVIDERS,state.pvF.provider,'全部')}</select>`)}
     ${fitem('审核结果',`<select class="inp" data-action="pvReview">${optHTML(['安全','敏感'],state.pvF.review,'全部')}</select>`)}
     <div class="pv-fbtns"><button class="btn primary" data-action="pvQuery">查 询</button><button class="btn" data-action="pvReset">重 置</button></div>
@@ -1298,9 +1318,10 @@ function pvCandidates(col){
   for(let i=0;i<24;i++){
     let vid='9cf';for(let k=0;k<14;k++)vid+='0123456789abcdef'[Math.floor(r2()*16)];
     if(inPack.has(vid)||removed.has(vid))continue;
+    const bundleId=r2()<0.75?('XU'+(100000+Math.floor(r2()*900000))):'';
     const review=r2()<0.65?'安全':'敏感';
     const dt=new Date(Date.now()-Math.floor(r2()*400)*86400000);
-    rows.push({name:NAMES[Math.floor(r2()*NAMES.length)]||('Title '+(i+1)),vid,
+    rows.push({name:NAMES[Math.floor(r2()*NAMES.length)]||('Title '+(i+1)),vid,bundleId,
       provider:AUTO_PROVIDERS[Math.floor(r2()*AUTO_PROVIDERS.length)],review,
       risk:review==='敏感'?(r2()<0.6?'AE-L2-轻度色情低俗-男女亲热':'AE-L1-轻度暴力'):'',
       time:dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())+':'+p(dt.getSeconds()),
@@ -1324,7 +1345,7 @@ function pvAddModalHTML(col){
   rows.forEach(m=>{
     body+=`<tr>
       <td><input type="checkbox" class="chk" data-action="pvAddSel" data-id="${m.vid}" ${state.pvAddSel.has(m.vid)?'checked':''}></td>
-      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div></div></div></td>
+      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div>${m.bundleId?`<div class="mid">BundleID:${m.bundleId}</div>`:''}</div></div></td>
       <td>${m.provider}</td>
       <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
       <td>${m.time}</td>
@@ -1498,7 +1519,7 @@ document.addEventListener('click',e=>{
     state.amSelected.forEach(lid=>{
       const m=LIBRARY.find(x=>x.libId===lid);if(!m)return;
       if(isDup(m))return;
-      assets.push({id:randomId(),name:m.title,countries:m.countries.slice(),category:m.category,provider:m.provider,priority:1+Math.floor(rng()*5),review:rng()<0.75?'安全':'敏感',risk:'无',inboundDate:randomDate(),payType:pick(PAYTYPES),genre:m.genre,language:m.language,subtitle:m.subtitle,playForm:m.playForm,level:m.level,statusByRegion:{[rg]:'待打标'}});
+      assets.push({id:randomId(),name:m.title,videoId:m.videoId,bundleId:m.bundleId,countries:m.countries.slice(),category:m.category,provider:m.provider,priority:1+Math.floor(rng()*5),review:rng()<0.75?'安全':'敏感',risk:'无',inboundDate:randomDate(),payType:pick(PAYTYPES),genre:m.genre,language:m.language,subtitle:m.subtitle,playForm:m.playForm,level:m.level,statusByRegion:{[rg]:'待打标'}});
       n++;
     });
     state.amSelected.clear();closeModal();
