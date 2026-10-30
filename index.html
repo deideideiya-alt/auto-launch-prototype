@@ -1274,7 +1274,7 @@ function pvModalHTML(col){
   <div class="pv-actions">
     <button class="btn danger-o" data-action="pvRemove">剔除媒资</button>
     <button class="btn primary" data-action="pvAddOpen">添加媒资</button>
-    <span class="sel-info">已选 <b>${state.pvSel.size}</b> 项媒资，勾选后点击【剔除媒资】可移出该媒资包</span>
+    <span class="sel-info">已选 <b id="pvSelCount">${state.pvSel.size}</b> 项媒资，勾选后点击【剔除媒资】可移出该媒资包</span>
   </div>
   <div class="pv-count">媒资包共 <b>${packSize}</b> 项 · 当前筛选命中 <b>${rows.length}</b> 条</div>
   <div class="am-table-wrap pv-wrap"><table><thead><tr>
@@ -1337,7 +1337,7 @@ function pvAddModalHTML(col){
     ${fitem('审核结果',`<select class="inp" data-action="pvAddReview">${optHTML(['安全','敏感'],state.pvAddF.review,'全部')}</select>`)}
     <div class="pv-fbtns"><button class="btn" data-action="pvAddReset">重 置</button></div>
   </div>
-  <div class="pv-count">可添加媒资 <b>${rows.length}</b> 项，已选 <b>${state.pvAddSel.size}</b> 项</div>
+  <div class="pv-count">可添加媒资 <b>${rows.length}</b> 项，已选 <b id="pvAddCount">${state.pvAddSel.size}</b> 项</div>
   <div class="am-table-wrap pv-wrap"><table><thead><tr>
     <th style="width:34px"><input type="checkbox" class="chk" data-action="pvAddSelAll"></th>
     <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>入库时间</th>
@@ -1548,8 +1548,19 @@ document.addEventListener('click',e=>{
   if(a==='pvReset'){state.pvF={title:'',id:'',provider:'',review:''};state.pvPage=1;renderPvModal();return;}
 
   /* 预览媒资包：剔除 / 添加媒资 */
-  if(a==='pvSel'){if(el.checked)state.pvSel.add(id);else state.pvSel.delete(id);renderPvModal();return;}
-  if(a==='pvSelAll'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const rows=pvRows(col);const page=rows.slice((state.pvPage-1)*10,state.pvPage*10);if(el.checked)page.forEach(m=>state.pvSel.add(m.vid));else page.forEach(m=>state.pvSel.delete(m.vid));renderPvModal();return;}
+  if(a==='pvSel'){
+    if(el.checked)state.pvSel.add(id);else state.pvSel.delete(id);
+    const c=document.getElementById('pvSelCount');if(c)c.textContent=state.pvSel.size;
+    const hd=document.querySelector('[data-action="pvSelAll"]');
+    if(hd)hd.checked=document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvSel"]').length>0&&[...document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvSel"]')].every(x=>x.checked);
+    return;
+  }
+  if(a==='pvSelAll'){
+    if(el.checked)document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvSel"]').forEach(x=>{x.checked=true;state.pvSel.add(x.dataset.id);});
+    else document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvSel"]').forEach(x=>{x.checked=false;state.pvSel.delete(x.dataset.id);});
+    const c=document.getElementById('pvSelCount');if(c)c.textContent=state.pvSel.size;
+    return;
+  }
   if(a==='pvRemove'){
     if(!state.pvSel.size){toast('请先勾选需要剔除的媒资','info');return;}
     const n=state.pvSel.size;
@@ -1566,8 +1577,23 @@ document.addEventListener('click',e=>{
     toast('已剔除 '+n+' 项媒资，媒资包剩余 '+pvPackRows(col).length+' 项','info');return;
   }
   if(a==='pvAddOpen'){openPvAdd();return;}
-  if(a==='pvAddSel'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const cand=pvCandidates(col).find(m=>m.vid===id);if(el.checked&&cand)state.pvAddSel.add(id);else state.pvAddSel.delete(id);renderPvModal();return;}
-  if(a==='pvAddSelAll'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const rows=pvAddRows(col);if(el.checked)rows.forEach(m=>state.pvAddSel.add(m.vid));else state.pvAddSel.clear();renderPvModal();return;}
+  if(a==='pvAddSel'){
+    const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+    const cand=pvCandidates(col).find(m=>m.vid===id);
+    if(el.checked&&cand)state.pvAddSel.add(id);else state.pvAddSel.delete(id);
+    const c=document.getElementById('pvAddCount');if(c)c.textContent=state.pvAddSel.size;
+    const btn=document.querySelector('[data-action="pvAddConfirm"]');if(btn)btn.disabled=!state.pvAddSel.size;
+    const hd=document.querySelector('[data-action="pvAddSelAll"]');
+    if(hd)hd.checked=!state.pvAddSel.size?false:[...document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvAddSel"]')].every(x=>x.checked);
+    return;
+  }
+  if(a==='pvAddSelAll'){
+    if(el.checked)document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvAddSel"]').forEach(x=>{x.checked=true;state.pvAddSel.add(x.dataset.id);});
+    else document.querySelectorAll('.pv-wrap tbody .chk[data-action="pvAddSel"]').forEach(x=>{x.checked=false;state.pvAddSel.delete(x.dataset.id);});
+    const c=document.getElementById('pvAddCount');if(c)c.textContent=state.pvAddSel.size;
+    const btn=document.querySelector('[data-action="pvAddConfirm"]');if(btn)btn.disabled=!state.pvAddSel.size;
+    return;
+  }
   if(a==='pvAddReset'){state.pvAddF={title:'',provider:'',review:''};state.pvAddSel.clear();renderPvModal();return;}
   if(a==='pvAddCancel'){state.pvAddOpen=false;state.pvAddSel.clear();renderPvModal();return;}
   if(a==='pvAddConfirm'){
