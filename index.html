@@ -380,6 +380,8 @@
   .pv-fitem .inp{height:32px;}
   .pv-fbtns{display:flex;gap:8px;margin-left:auto;}
   .pv-count{font-size:12px;color:var(--text-2);margin:10px 20px 6px;}
+  .pv-actions{display:flex;align-items:center;gap:8px;padding:2px 20px 0;}
+  .pv-actions .sel-info{font-size:11.5px;color:var(--text-3);margin-left:4px;}
 </style>
 </head>
 <body>
@@ -538,6 +540,8 @@ const state={
   page:'launch',sideOpen:{rec:true},
   autoRegion:'US',autoStatus:'待确认',autoPage:1,autoSelected:new Set(),autoCfg:{},
   pvCol:null,pvPage:1,pvF:{title:'',id:'',provider:'',review:''},
+  pvSel:new Set(),pvRemoved:{},pvAdded:{},
+  pvAddOpen:false,pvAddSel:new Set(),pvAddF:{title:'',provider:'',review:''},
   cfgSel:null
 };
 
@@ -1222,8 +1226,13 @@ function pvAllRows(col){
   rows.sort((a,b)=>b.score-a.score); // 仍按星的排序得分降序，只是不再展示该列
   return rows;
 }
+function pvPackRows(col){
+  const removed=state.pvRemoved[col.id]||new Set();
+  const added=state.pvAdded[col.id]||[];
+  return pvAllRows(col).filter(m=>!removed.has(m.vid)).concat(added.filter(m=>!removed.has(m.vid)));
+}
 function pvRows(col){
-  return pvAllRows(col).filter(m=>{
+  return pvPackRows(col).filter(m=>{
     if(state.pvF.title&&!m.name.toLowerCase().includes(state.pvF.title.toLowerCase()))return false;
     if(state.pvF.id&&!m.vid.toLowerCase().includes(state.pvF.id.toLowerCase()))return false;
     if(state.pvF.provider&&m.provider!==state.pvF.provider)return false;
@@ -1233,14 +1242,16 @@ function pvRows(col){
 }
 function pvModalHTML(col){
   const PER=10;
+  const packSize=pvPackRows(col).length;
   const rows=pvRows(col);
   const pages=Math.max(1,Math.ceil(rows.length/PER));
   if(state.pvPage>pages)state.pvPage=pages;
   const pageRows=rows.slice((state.pvPage-1)*PER,state.pvPage*PER);
+  const allSel=!pageRows.length?false:pageRows.every(m=>state.pvSel.has(m.vid));
   let body='';
   pageRows.forEach(m=>{
     body+=`<tr>
-      <td><input type="checkbox" class="chk"></td>
+      <td><input type="checkbox" class="chk" data-action="pvSel" data-id="${m.vid}" ${state.pvSel.has(m.vid)?'checked':''}></td>
       <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div></div></div></td>
       <td>${m.provider}</td>
       <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
@@ -1257,12 +1268,17 @@ function pvModalHTML(col){
     ${fitem('审核结果',`<select class="inp" data-action="pvReview">${optHTML(['安全','敏感'],state.pvF.review,'全部')}</select>`)}
     <div class="pv-fbtns"><button class="btn primary" data-action="pvQuery">查 询</button><button class="btn" data-action="pvReset">重 置</button></div>
   </div>`;
-  return `<div class="am-head"><h3>预览媒资包 —「${col.tag}」（${col.region} · 共 ${col.count} 项）</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
+  return `<div class="am-head"><h3>预览媒资包 —「${col.tag}」（${col.region} · 共 ${packSize} 项）</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
   <div class="legend pv-legend">${I.warn}<div>提示：中国政治类违规媒资系统将自动过滤，不可添加至媒资包</div></div>
   ${pvFilters}
-  <div class="pv-count">共找到 <b>${rows.length}</b> 条媒资</div>
+  <div class="pv-actions">
+    <button class="btn danger-o" data-action="pvRemove">剔除媒资</button>
+    <button class="btn primary" data-action="pvAddOpen">添加媒资</button>
+    <span class="sel-info">已选 <b>${state.pvSel.size}</b> 项媒资，勾选后点击【剔除媒资】可移出该媒资包</span>
+  </div>
+  <div class="pv-count">媒资包共 <b>${packSize}</b> 项 · 当前筛选命中 <b>${rows.length}</b> 条</div>
   <div class="am-table-wrap pv-wrap"><table><thead><tr>
-    <th style="width:34px"><input type="checkbox" class="chk"></th>
+    <th style="width:34px"><input type="checkbox" class="chk" data-action="pvSelAll" ${allSel?'checked':''}></th>
     <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>风险标签</th><th style="width:130px">操作</th>
   </tr></thead><tbody>${body}</tbody></table></div>
   <div class="am-pager">
@@ -1273,8 +1289,76 @@ function pvModalHTML(col){
     <button class="btn" data-action="pvPg" data-v="next" ${state.pvPage>=pages?'disabled':''}>下一页</button>
   </div>`;
 }
+/* ---------- 添加媒资（预览媒资包内） ---------- */
+function pvCandidates(col){
+  const r2=mulberry32(pvSeed(col.id+'add'));
+  const inPack=new Set(pvPackRows(col).map(m=>m.vid));
+  const removed=state.pvRemoved[col.id]||new Set();
+  const rows=[];const p=x=>String(x).padStart(2,'0');
+  for(let i=0;i<24;i++){
+    let vid='9cf';for(let k=0;k<14;k++)vid+='0123456789abcdef'[Math.floor(r2()*16)];
+    if(inPack.has(vid)||removed.has(vid))continue;
+    const review=r2()<0.65?'安全':'敏感';
+    const dt=new Date(Date.now()-Math.floor(r2()*400)*86400000);
+    rows.push({name:NAMES[Math.floor(r2()*NAMES.length)]||('Title '+(i+1)),vid,
+      provider:AUTO_PROVIDERS[Math.floor(r2()*AUTO_PROVIDERS.length)],review,
+      risk:review==='敏感'?(r2()<0.6?'AE-L2-轻度色情低俗-男女亲热':'AE-L1-轻度暴力'):'',
+      time:dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())+':'+p(dt.getSeconds()),
+      hue:Math.floor(r2()*360)});
+  }
+  return rows;
+}
+function pvAddRows(col){
+  return pvCandidates(col).filter(m=>{
+    if(state.pvAddF.title&&!m.name.toLowerCase().includes(state.pvAddF.title.toLowerCase()))return false;
+    if(state.pvAddF.provider&&m.provider!==state.pvAddF.provider)return false;
+    if(state.pvAddF.review&&m.review!==state.pvAddF.review)return false;
+    return true;
+  });
+}
+function pvAddModalHTML(col){
+  const rows=pvAddRows(col);
+  const fitem=(label,ctrl)=>`<div class="pv-fitem"><label>${label}</label>${ctrl}</div>`;
+  let body='';
+  if(!rows.length){body=`<tr><td colspan="5"><div class="empty">${I.empty}<div>未找到可添加的媒资</div></div></td></tr>`;}
+  rows.forEach(m=>{
+    body+=`<tr>
+      <td><input type="checkbox" class="chk" data-action="pvAddSel" data-id="${m.vid}" ${state.pvAddSel.has(m.vid)?'checked':''}></td>
+      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div></div></div></td>
+      <td>${m.provider}</td>
+      <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
+      <td>${m.time}</td>
+    </tr>`;
+  });
+  return `<div class="am-head"><h3>添加媒资 —「${col.tag}」（${col.region}）</h3><button class="am-close" data-action="pvAddCancel" title="关闭">✕</button></div>
+  <div class="pv-filters">
+    ${fitem('媒资标题',`<input class="inp" data-action="pvAddTitle" placeholder="请输入媒资标题" value="${state.pvAddF.title}">`)}
+    ${fitem('内容商',`<select class="inp" data-action="pvAddProvider">${optHTML(AUTO_PROVIDERS,state.pvAddF.provider,'全部')}</select>`)}
+    ${fitem('审核结果',`<select class="inp" data-action="pvAddReview">${optHTML(['安全','敏感'],state.pvAddF.review,'全部')}</select>`)}
+    <div class="pv-fbtns"><button class="btn" data-action="pvAddReset">重 置</button></div>
+  </div>
+  <div class="pv-count">可添加媒资 <b>${rows.length}</b> 项，已选 <b>${state.pvAddSel.size}</b> 项</div>
+  <div class="am-table-wrap pv-wrap"><table><thead><tr>
+    <th style="width:34px"><input type="checkbox" class="chk" data-action="pvAddSelAll"></th>
+    <th>媒资信息</th><th>内容商</th><th>审核结果</th><th>入库时间</th>
+  </tr></thead><tbody>${body}</tbody></table></div>
+  <div class="am-foot">
+    <span>确认后这些媒资将加入该媒资包</span>
+    <div class="am-foot-btns">
+      <button class="btn" data-action="pvAddCancel">取 消</button>
+      <button class="btn primary" data-action="pvAddConfirm" ${state.pvAddSel.size?'':'disabled'}>确认添加</button>
+    </div>
+  </div>`;
+}
+function openPvAdd(){
+  const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);if(!col)return;
+  state.pvAddOpen=true;state.pvAddSel.clear();state.pvAddF={title:'',provider:'',review:''};
+  const m=document.getElementById('modal');m.className='modal wide';m.innerHTML=pvAddModalHTML(col);
+  document.getElementById('overlay').classList.add('open');
+}
 function renderPvModal(){
   const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);if(!col)return;
+  if(state.pvAddOpen){const m=document.getElementById('modal');m.className='modal wide';m.innerHTML=pvAddModalHTML(col);document.getElementById('overlay').classList.add('open');return;}
   const m=document.getElementById('modal');m.className='modal wide';m.innerHTML=pvModalHTML(col);
   document.getElementById('overlay').classList.add('open');
 }
@@ -1451,7 +1535,7 @@ document.addEventListener('click',e=>{
   if(a==='autoSelAll'){const {rows}=autoRows();if(el.checked)rows.forEach(c=>state.autoSelected.add(c.id));else rows.forEach(c=>state.autoSelected.delete(c.id));render();return;}
   if(a==='autoSel'){if(el.checked)state.autoSelected.add(id);else state.autoSelected.delete(id);const sc=document.getElementById('autoSelCount');if(sc)sc.textContent=state.autoSelected.size;return;}
   if(a==='autoPg'){const n=+v;if(n>=1){state.autoPage=n;render();}return;}
-  if(a==='pvOpen'){state.pvCol=id;state.pvPage=1;renderPvModal();return;}
+  if(a==='pvOpen'){state.pvCol=id;state.pvPage=1;state.pvSel.clear();state.pvAddOpen=false;state.pvAddSel.clear();state.pvF={title:'',id:'',provider:'',review:''};renderPvModal();return;}
   if(a==='pvPg'){
     const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
     const pages=Math.max(1,Math.ceil(Math.min(col.count,30)/10));
@@ -1462,6 +1546,38 @@ document.addEventListener('click',e=>{
   if(a==='pvNoop'){toast('原型演示：该操作本次未开放','info');return;}
   if(a==='pvQuery'){state.pvPage=1;renderPvModal();return;}
   if(a==='pvReset'){state.pvF={title:'',id:'',provider:'',review:''};state.pvPage=1;renderPvModal();return;}
+
+  /* 预览媒资包：剔除 / 添加媒资 */
+  if(a==='pvSel'){if(el.checked)state.pvSel.add(id);else state.pvSel.delete(id);renderPvModal();return;}
+  if(a==='pvSelAll'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const rows=pvRows(col);const page=rows.slice((state.pvPage-1)*10,state.pvPage*10);if(el.checked)page.forEach(m=>state.pvSel.add(m.vid));else page.forEach(m=>state.pvSel.delete(m.vid));renderPvModal();return;}
+  if(a==='pvRemove'){
+    if(!state.pvSel.size){toast('请先勾选需要剔除的媒资','info');return;}
+    const n=state.pvSel.size;
+    openModal(`<div class="warn-ico">${I.warn}</div><h3>确认剔除 ${n} 项媒资？</h3><p>剔除后这些媒资将从该媒资包中移除，不计入最终生成的媒资包；该操作仅影响本次栏目。</p><div class="actions"><button class="btn" data-action="pvRemoveCancel">取消</button><button class="btn primary" data-action="pvRemoveConfirm">确认剔除</button></div>`);
+    return;
+  }
+  if(a==='pvRemoveCancel'){renderPvModal();return;}
+  if(a==='pvRemoveConfirm'){
+    const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+    if(!state.pvRemoved[col.id])state.pvRemoved[col.id]=new Set();
+    const n=state.pvSel.size;
+    state.pvSel.forEach(vid=>state.pvRemoved[col.id].add(vid));
+    state.pvSel.clear();state.pvPage=1;renderPvModal();
+    toast('已剔除 '+n+' 项媒资，媒资包剩余 '+pvPackRows(col).length+' 项','info');return;
+  }
+  if(a==='pvAddOpen'){openPvAdd();return;}
+  if(a==='pvAddSel'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const cand=pvCandidates(col).find(m=>m.vid===id);if(el.checked&&cand)state.pvAddSel.add(id);else state.pvAddSel.delete(id);renderPvModal();return;}
+  if(a==='pvAddSelAll'){const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);const rows=pvAddRows(col);if(el.checked)rows.forEach(m=>state.pvAddSel.add(m.vid));else state.pvAddSel.clear();renderPvModal();return;}
+  if(a==='pvAddReset'){state.pvAddF={title:'',provider:'',review:''};state.pvAddSel.clear();renderPvModal();return;}
+  if(a==='pvAddCancel'){state.pvAddOpen=false;state.pvAddSel.clear();renderPvModal();return;}
+  if(a==='pvAddConfirm'){
+    const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+    if(!state.pvAdded[col.id])state.pvAdded[col.id]=[];
+    const cand=pvCandidates(col).filter(m=>state.pvAddSel.has(m.vid));
+    cand.forEach(m=>state.pvAdded[col.id].push(m));
+    const n=cand.length;state.pvAddSel.clear();state.pvAddOpen=false;renderPvModal();
+    toast('已添加 '+n+' 项媒资，媒资包共 '+pvPackRows(col).length+' 项');return;
+  }
   if(a==='colGo'){
     const col=AUTO_COLUMNS.find(c=>c.id===id);
     openModal(`<div class="warn-ico" style="background:var(--accent-soft);color:var(--accent-d)">${I.go}</div><h3>确认上线栏目「${col.tag}」？</h3><p>上线后将自动完成：<br>1. 创建媒资包（${col.count} 项媒资 · ${col.region}）；<br>2. 在 CMS 自动创建对应栏目「${col.tag}」。</p>
@@ -1549,6 +1665,8 @@ document.addEventListener('change',e=>{
   if(a==='autoMStatus'){autoCfgFor(state.autoRegion).mStatus=el.value;return;}
   if(a==='pvProvider'){state.pvF.provider=el.value;state.pvPage=1;renderPvModal();return;}
   if(a==='pvReview'){state.pvF.review=el.value;state.pvPage=1;renderPvModal();return;}
+  if(a==='pvAddProvider'){state.pvAddF.provider=el.value;renderPvModal();return;}
+  if(a==='pvAddReview'){state.pvAddF.review=el.value;renderPvModal();return;}
   if(a==='cfgTag'){const s=state.cfgSel[el.dataset.cat].tags;if(el.checked)s.add(el.value);else s.delete(el.value);renderCfgModal();return;}
   if(a==='ms'){
     const ms=el.dataset.ms;
@@ -1576,6 +1694,10 @@ document.addEventListener('input',e=>{
     clearTimeout(st);
     const key=a==='pvTitle'?'title':'id';
     st=setTimeout(()=>{state.pvF[key]=el.value;state.pvPage=1;renderPvModal();},300);
+  }
+  if(a==='pvAddTitle'){
+    clearTimeout(st);
+    st=setTimeout(()=>{state.pvAddF.title=el.value;renderPvModal();},300);
   }
 });
 
