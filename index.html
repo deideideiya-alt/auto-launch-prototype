@@ -414,6 +414,42 @@
   #tagTip .tagtip-row:last-child{border-bottom:0;}
   #tagTip .tagtip-k{flex:none;width:74px;color:var(--text-3);font-weight:600;font-size:11px;}
   #tagTip .tagtip-v{color:var(--text-1);line-height:1.6;}
+  /* 媒资详情页 */
+  .dt-crumb{display:flex;align-items:center;gap:8px;padding:12px 20px 2px;font-size:12.5px;color:var(--text-3);}
+  .dt-crumb .lnk{color:var(--accent-d);}
+  .dt-crumb .cur{color:var(--text-1);font-weight:600;}
+  .dt-block{margin:12px 20px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);}
+  .dt-bar{height:34px;display:flex;align-items:center;background:linear-gradient(90deg,#5b7cfa,#a259f7);color:#fff;font-weight:700;font-size:13.5px;padding:0 16px;}
+  .dt-bar svg{width:14px;height:14px;margin-left:auto;opacity:.85;}
+  .dt-body{padding:14px 18px 16px;}
+  .dt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 26px;}
+  @media (max-width:1100px){.dt-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media (max-width:760px){.dt-grid{grid-template-columns:1fr;}}
+  .kv{display:flex;gap:2px;font-size:12.5px;min-width:0;align-items:flex-start;}
+  .kv .k{color:var(--text-2);flex:none;}
+  .kv .v{color:var(--text-1);word-break:break-all;line-height:1.55;}
+  .kv .v.mut{color:var(--text-3);}
+  .kv .v.url{display:flex;align-items:center;gap:6px;min-width:0;}
+  .kv .v.url .ut{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+  .copy{border:0;background:transparent;color:var(--accent-d);cursor:pointer;padding:2px 3px;border-radius:4px;display:inline-flex;flex:none;}
+  .copy svg{width:13px;height:13px;}
+  .copy:hover{background:var(--accent-soft);}
+  .dt-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 0;color:var(--text-3);font-size:12.5px;}
+  .dt-empty svg{width:34px;height:34px;opacity:.45;}
+  .dt-empty .iclap{opacity:.85;color:#444;}
+  .tagchips{display:flex;flex-wrap:wrap;gap:6px;}
+  .tagchips .ttag b{font-weight:700;margin-right:3px;opacity:.75;}
+  .dot-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--text-2);margin-bottom:12px;}
+  .dot-legend .dot{margin-right:5px;}
+  .pcards{display:flex;flex-wrap:wrap;gap:14px;}
+  .pcard{width:158px;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);}
+  .pthumb{position:relative;height:88px;}
+  .pthumb .psz{position:absolute;top:5px;right:6px;font-size:10px;color:#fff;background:rgba(0,0,0,.45);padding:1px 6px;border-radius:4px;}
+  .pcard .pname{font-size:12px;font-weight:600;color:var(--text-1);padding:7px 10px 1px;}
+  .pcard .psc{font-size:11px;color:var(--text-3);padding:0 10px 9px;display:flex;align-items:center;}
+  .pcard .psc .dot{width:7px;height:7px;margin-right:5px;}
+  .mname.lk{cursor:pointer;}
+  .mname.lk:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -587,7 +623,7 @@ const state={
   autoRegion:'US',autoStatus:'待确认',autoPage:1,autoSelected:new Set(),autoCfg:{},
   pvCol:null,pvPage:1,pvSize:10,pvF:{title:'',id:''},
   pvH:{provider:new Set(),review:new Set(),countries:new Set(),deploy:new Set(),langs:new Set(),subs:new Set()},
-  pvHopen:null,pvHq:{},pvHFocus:false,pvPopPos:{left:0,top:0},
+  pvHopen:null,pvHq:{},pvHFocus:false,pvPopPos:{left:0,top:0},detail:null,
   pvSel:new Set(),pvRemoved:{},pvAdded:{},
   pvAddOpen:false,pvAddSel:new Set(),pvAddF:{title:'',provider:'',review:''},
   cfgSel:null
@@ -603,6 +639,8 @@ const I={
   warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
   empty:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/></svg>',
   filterIco:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  clap:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.2 6.2l-.5-1.9a1 1 0 0 0-1.2-.7L3.1 7.4a1 1 0 0 0-.7 1.2l.4 1.7 18.4-4.1zM3 12h18v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-7zm4.6 1.5l1 2-1.8.4-1-2 1.8-.4zm4.6-1l1 2-1.8.4-1-2 1.8-.4zm4.6-1l1 2-1.8.4-1-2 1.8-.4z"/></svg>',
   gear:'<svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
 
@@ -1130,7 +1168,7 @@ function renderSidebar(){
     h+=`<button class="sitem group" data-action="sideGroup" data-v="${k}">${ic}<span>${l}</span><span class="chev">${SICON.chev}</span></button>`;
   });
   document.getElementById('sidebar').innerHTML=h;
-  document.getElementById('pageTitle').textContent=pg==='auto'?'自动栏目工作台':'上新工作台';
+  document.getElementById('pageTitle').textContent=state.detail?'媒资详情':(pg==='auto'?'自动栏目工作台':'上新工作台');
 }
 
 /* ---------- 自动化工作台 ---------- */
@@ -1303,6 +1341,7 @@ function pvAllRows(col){
       name,vid,bundleId,
       provider:AUTO_PROVIDERS[Math.floor(r2()*AUTO_PROVIDERS.length)],
       review,risk,countries,deploy,langs,subs,tags,
+      cat:r2()<0.6?'Movies':'TV Series',
       score:(r2()*95+1).toFixed(14),
       time:dt.getFullYear()+'-'+p(dt.getMonth()+1)+'-'+p(dt.getDate())+' '+p(dt.getHours())+':'+p(dt.getMinutes())+':'+p(dt.getSeconds()),
       hue:Math.floor(r2()*360)
@@ -1391,7 +1430,7 @@ function pvModalHTML(col){
   pageRows.forEach(m=>{
     const tagsHTML=m.tags.slice(0,2).map(t=>`<span class="ttag">${t.t}</span>`).join('')+(m.tags.length>2?`<span class="ttag plus">+${m.tags.length-2}</span>`:'');
     body+=`<tr>
-      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname">${m.name}</div><div class="mid">VideoID:${m.vid}</div>${m.bundleId?`<div class="mid">BundleID:${m.bundleId}</div>`:''}</div></div></td>
+      <td><div class="mcell"><div class="poster" style="background:linear-gradient(135deg,hsl(${m.hue},45%,55%),hsl(${(m.hue+40)%360},55%,35%))"></div><div><div class="mname lk" data-action="pvDetail" data-id="${m.vid}" title="查看媒资详情">${m.name}</div><div class="mid">VideoID:${m.vid}</div>${m.bundleId?`<div class="mid">BundleID:${m.bundleId}</div>`:''}</div></div></td>
       <td>${m.countries.map(c=>`<span class="chint">${c}</span>`).join('')}</td>
       <td><span class="stpip" style="--c:${STATUS_PIP[m.deploy]||'var(--gray)'}">${m.deploy}</span></td>
       <td>${m.langs.join('、')}</td>
@@ -1400,10 +1439,9 @@ function pvModalHTML(col){
       <td><span class="${m.review==='安全'?'rev-safe':'rev-risk'}">${m.review}</span></td>
       <td class="tagcell" data-tip="${encodeURIComponent(pvTagTipHTML(m))}"><div class="tagcell-in">${tagsHTML}</div></td>
       <td>${m.risk?`<span class="risk-tag" title="${m.risk}">${m.risk}</span>`:'<span class="risk-none">无</span>'}</td>
-      <td><div class="ops"><button class="lnk" data-action="pvNoop">编辑</button><button class="lnk" data-action="pvNoop">详情</button><button class="lnk red" data-action="pvNoop">删除</button></div></td>
     </tr>`;
   });
-  if(!rows.length){body=`<tr><td colspan="10"><div class="empty">${I.empty}<div>未找到匹配媒资</div></div></td></tr>`;}
+  if(!rows.length){body=`<tr><td colspan="9"><div class="empty">${I.empty}<div>未找到匹配媒资</div></div></td></tr>`;}
   const fitem=(label,ctrl)=>`<div class="pv-fitem"><label>${label}</label>${ctrl}</div>`;
   const pvFilters=`<div class="pv-filters">
     ${fitem('媒资标题',`<input class="inp" data-action="pvTitle" placeholder="请输入媒资标题" value="${state.pvF.title}">`)}
@@ -1416,7 +1454,7 @@ function pvModalHTML(col){
   ${pvFilters}
   <div class="pv-count">媒资包共 <b>${packSize}</b> 项 · 当前筛选命中 <b>${rows.length}</b> 条</div>
   <div class="am-table-wrap pv-wrap"><table><thead><tr>
-    <th>媒资信息</th>${pvTh('countries','可用国家',col)}${pvTh('deploy','部署状态',col)}${pvTh('langs','语言',col)}${pvTh('subs','字幕语言',col)}${pvTh('provider','内容商',col)}${pvTh('review','审核结果',col)}<th>标准化标签</th><th>风险标签</th><th style="width:130px">操作</th>
+    <th>媒资信息</th>${pvTh('countries','可用国家',col)}${pvTh('deploy','部署状态',col)}${pvTh('langs','语言',col)}${pvTh('subs','字幕语言',col)}${pvTh('provider','内容商',col)}${pvTh('review','审核结果',col)}<th>标准化标签</th><th>风险标签</th>
   </tr></thead><tbody>${body}</tbody></table></div>
   <div class="am-pager">
     <span>显示 ${rows.length?((state.pvPage-1)*PER+1):0} 至 ${Math.min(state.pvPage*PER,rows.length)} 项结果，共 ${rows.length} 项</span>
@@ -1712,6 +1750,18 @@ document.addEventListener('click',e=>{
     state.pvH[el.dataset.k].clear();state.pvPage=1;state.pvHFocus=true;renderPvModal();return;
   }
   if(a==='pvHClose'){state.pvHopen=null;renderPvPop();return;}
+  if(a==='pvDetail'){
+    state.detail=id;state.pvHopen=null;state.pvHFocus=false;
+    const pp=document.getElementById('pvPop');if(pp)pp.remove();
+    const tt=document.getElementById('tagTip');if(tt)tt.style.display='none';
+    closeModal();render();return;
+  }
+  if(a==='dtBack'){state.detail=null;render();renderPvModal();return;}
+  if(a==='dtCopy'){
+    const url=decodeURIComponent(el.dataset.u||'');
+    (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(url):Promise.reject()).then(()=>toast('播放地址已复制到剪贴板')).catch(()=>toast('已生成播放地址（原型环境不支持剪贴板）','info'));
+    return;
+  }
   if(a==='colGo'){
     const col=AUTO_COLUMNS.find(c=>c.id===id);
     openModal(`<div class="warn-ico" style="background:var(--accent-soft);color:var(--accent-d)">${I.go}</div><h3>确认上线栏目「${col.tag}」？</h3><p>上线后将自动完成：<br>1. 创建媒资包（${col.count} 项媒资 · ${col.region}）；<br>2. 在 CMS 自动创建对应栏目「${col.tag}」。</p>
@@ -1865,9 +1915,101 @@ document.addEventListener('mouseout',e=>{
   if(e.target.closest('.tagcell'))hideTagTip();
 });
 
+/* ---------- 媒资详情页 ---------- */
+function dtData(m,col){
+  const slug=m.provider.toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  const base=`https://media-${slug}.fast.example-tv.com/v1/master/${m.vid}/production-hls-aes128-rtv-8360-playout/master.m3u8`;
+  const url1=base+'?ads.app_bundle={{appPackage}}&ads.ad_rule=1&ssai=ssai&device.make={{deviceMake}}';
+  const url2=base+'?ads.app_bundle={{appPackage}}&ads.ad_tracking=server_side';
+  return {
+    summary:[
+      ['媒资ID',m.vid],['BundleID',m.bundleId||'-'],['名称',m.name],
+      ['媒资类型',m.cat],['内容商',m.provider],['媒资状态','上线']
+    ],
+    detail:[
+      ['标题',m.name],['IMDB ID',''],['类型',m.cat],['语言',m.langs.join('、')],['别名',''],['Overlay',''],
+      ['子类型',''],['音轨语言',m.langs[0]||''],['分级标签',''],
+      ['简介','Film favourites, 100% free. Explore curated highlights of the Rakuten TV movie catalogue to suit every taste. Priceless entertainment, streaming 24/7.'],
+      ['清晰度',''],['播放形式','URL'],['字幕',m.subs.join('、')||'-']
+    ],
+    play:[
+      ['视频地址',url1,'url'],['分类',m.cat],['导广告视频地址',url2,'url'],
+      ['SSAI广告地址',''],['使用TCL SSAI',''],['是否DRM','否']
+    ],
+    dist:[
+      ['可用国家',m.countries.join('、')],['适配地区',col?col.region:''],['付费类型','广告付费'],
+      ['合作伙伴',''],['支持画中画',''],['生效应用','TCL Channel、LiveTV、TV+、MovieArk、MovieArk Launcher、Roku']
+    ],
+    deployInfo:[
+      ['部署状态',m.deploy],['媒资部署上线时间',''],['媒资层级','季'],
+      ['所属剧集',''],['总集数',''],['已更新集数',''],['最近更新时间','']
+    ],
+    right:[
+      ['版权开始时间',''],['版权结束时间','2099-12-31'],['入库年龄分数','15'],
+      ['内部年龄分级','15'],['年龄分级来源','入库初始年龄分级'],['IMDB评分',''],
+      ['是否儿童内容',''],['预告片','']
+    ],
+    time:[
+      ['媒资入库时间',m.time],['资源方更新时间',m.time],['人工更新时间','']
+    ],
+    tags:m.tags,
+    localize:[['本地化字幕','无'],['本地化标题','无'],['本地化海报','无'],['本地化简介','无']],
+    review:[
+      ['媒资审核状态',m.review==='安全'?'已审核':'未审核'],['审核结果',m.review],
+      ['审核风险原因',m.risk||'无'],['审核备注','']
+    ],
+    posters:[
+      {name:m.name,scene:'默认海报',color:'#9b59f7',size:'240*134',hue:m.hue},
+      {name:m.name,scene:'标题海报',color:'#4f6ef7',size:'1280*720',hue:(m.hue+60)%360},
+      {name:m.name,scene:'上架海报',color:'#2ecc71',size:'600*800',hue:(m.hue+140)%360},
+      {name:m.name,scene:'高焦海报',color:'#e74c3c',size:'240*320',hue:(m.hue+220)%360}
+    ]
+  };
+}
+function kvHTML(pair){
+  const [k,v,mode]=pair;
+  if(mode==='url'){
+    const u=encodeURIComponent(v);
+    return `<div class="kv"><span class="k">${k}：</span><span class="v url"><span class="ut" title="${v}">${v}</span><button class="copy" data-action="dtCopy" data-u="${u}" title="复制">${I.copy}</button></span></div>`;
+  }
+  return `<div class="kv"><span class="k">${k}：</span><span class="v ${v===''?'mut':''}">${v===''?'-':v}</span></div>`;
+}
+function dtSection(title,pairs,extraHTML){
+  const body=pairs&&pairs.length?`<div class="dt-grid">${pairs.map(kvHTML).join('')}</div>`:'';
+  return `<div class="dt-block"><div class="dt-bar">${title}</div><div class="dt-body">${body}${extraHTML||''}</div></div>`;
+}
+function renderDetail(){
+  const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+  const m=pvPackRows(col||{id:'',region:'',tag:'',type:'',count:0}).find(x=>x.vid===state.detail)||pvAllRows(col||{id:'',region:'',tag:'',type:'',count:0})[0];
+  const d=dtData(m,col);
+  const emptyBox=(txt,ico)=>`<div class="dt-empty">${ico}${txt}</div>`;
+  const postersHTML=`<div class="dot-legend"><span><span class="dot" style="background:#9b59f7"></span>默认海报</span><span><span class="dot" style="background:#4f6ef7"></span>标题海报</span><span><span class="dot" style="background:#2ecc71"></span>上架海报</span><span><span class="dot" style="background:#e74c3c"></span>高焦海报</span></div>
+    <div class="pcards">${d.posters.map(p=>`<div class="pcard"><div class="pthumb" style="background:linear-gradient(135deg,hsl(${p.hue},45%,55%),hsl(${(p.hue+40)%360},55%,35%))"><span class="psz">${p.size}</span></div><div class="pname">${p.name}</div><div class="psc"><span class="dot" style="background:${p.color}"></span>${p.scene}</div></div>`).join('')}</div>`;
+  const tagsHTML=d.tags.length?`<div class="tagchips">${d.tags.map(t=>`<span class="ttag"><b>${t.k}</b>${t.t}</span>`).join('')}</div>`:emptyBox('暂无媒资标签',I.empty);
+  let html=`<div class="dt-crumb"><button class="lnk" data-action="dtBack">← 返回</button><span>/</span><span>媒资管理</span><span>/</span><span>媒资详情</span><span style="margin-left:12px">VideoID:${m.vid}</span></div>`;
+  html+=dtSection('媒资信息',d.summary);
+  html+=dtSection('媒资详情',d.detail);
+  html+=dtSection('播放信息',d.play);
+  html+=dtSection('分发信息',d.dist);
+  html+=dtSection('部署信息',d.deployInfo);
+  html+=dtSection('版权与分级',d.right);
+  html+=dtSection('时间信息',d.time);
+  html+=dtSection('媒资标签',null,tagsHTML);
+  html+=dtSection('本地化信息',d.localize);
+  html+=dtSection('审核详情',d.review);
+  html+=dtSection('媒资海报',null,postersHTML);
+  html+=dtSection('应用媒资',null,emptyBox('暂无数据',I.empty));
+  html+=dtSection('剧集海报',null,emptyBox('暂无海报',`<span class="iclap">${I.clap}</span>`));
+  document.getElementById('content').innerHTML=html;
+  window.scrollTo(0,0);
+}
 function render(){
   renderSidebar();
   renderHeader();
+  if(state.detail){
+    document.getElementById('topTabs').style.display='none';
+    renderDetail();return;
+  }
   if(state.page==='auto'){
     document.getElementById('topTabs').style.display='none';
     renderAuto();
