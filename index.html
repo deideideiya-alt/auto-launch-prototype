@@ -125,6 +125,7 @@
   .st-dot.wait{background:#f59e0b;}
   .st-dot.done{background:#1a7f4b;}
   .st-dot.off{background:var(--blue);}
+  .st-dot.gray{background:var(--text-3);}
   .status-tab .pip{width:7px;height:7px;border-radius:50%;}
 
   /* Toolbar */
@@ -533,6 +534,7 @@ REGIONS.forEach(rg=>{
     const subMatch=Math.max(1,Math.floor(cnt*(0.12+rng()*0.18))); // 仅字幕语言匹配
     AUTO_COLUMNS.push({
       id:randomId(),region:rg,tag:t[0],type:t[1],
+      cat:rng()<0.62?'Movies':'TV Series',
       count:cnt,st,
       langMatch:cnt-subMatch,subMatch,
       time:pastDateTime()
@@ -755,7 +757,7 @@ function msHTML(key,set,placeholder,all){
 function optHTML(arr,val,all){let h=`<option value="">${all}</option>`;arr.forEach(v=>{h+=`<option value="${v}" ${v===val?'selected':''}>${v}</option>`;});return h;}
 
 const COLDEFS=[['id','媒资信息'],['status','部署状态'],['countries','可用国家'],['category','分类'],['provider','内容商'],['priority','优先级'],['review','审核结果'],['risk','风险标签'],['inboundDate','入库时间'],['payType','付费类型'],['genre','类型'],['language','语言'],['subtitle','字幕语言']];
-const REC_COLDEFS=[['id','媒资信息'],['status','上线状态'],['fromStatus','原状态'],['region','上线国家/地区'],['operator','上线人'],['time','上线时间'],['countries','可用国家'],['category','分类'],['provider','内容商'],['review','审核结果'],['inboundDate','入库时间'],['payType','付费类型'],['genre','类型'],['language','语言'],['subtitle','字幕语言']];
+const REC_COLDEFS=[['id','媒资信息'],['status','上线状态'],['fromStatus','部署状态'],['region','上线国家/地区'],['operator','上线人'],['time','上线时间'],['countries','可用国家'],['category','分类'],['provider','内容商'],['review','审核结果'],['inboundDate','入库时间'],['payType','付费类型'],['genre','类型'],['language','语言'],['subtitle','字幕语言']];
 function colConfigHTML(mskey,vis){
   const defs=mskey==='poolCols'?COLDEFS:REC_COLDEFS;
   let opts='';
@@ -905,7 +907,7 @@ function recCellHTML(k,rec){
       return `<div class="mname">${rec.name}</div><div class="mid">VideoID:${_a.videoId||rec.assetId}</div>`+(_a.bundleId?`<div class="mid">BundleID:${_a.bundleId}</div>`:'');
     }
     case 'status':return badge('已下线');
-    case 'fromStatus':return badge(rec.fromStatus);
+    case 'fromStatus':return badge(rec.fromStatus==='已部署'?'已下线':rec.fromStatus);
     case 'region':return `<span class="ctag cur">${rec.region}</span>`;
     case 'operator':return rec.operator||'-';
     case 'time':return rec.time;
@@ -1001,13 +1003,14 @@ function cancelOnline(recId){
 function downloadCSV(){
   try{
     const rows=getRecRows();
-    const head=['媒资ID','媒资标题','上线状态','原状态','上线国家/地区','上线人','上线时间','可用国家','分类','内容商','审核结果','入库时间','付费类型','类型','语言','字幕语言'];
+    const head=['媒资ID','媒资标题','上线状态','部署状态','上线国家/地区','上线人','上线时间','可用国家','分类','内容商','审核结果','入库时间','付费类型','类型','语言','字幕语言'];
     const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
     const lines=[head.map(q).join(',')];
     rows.forEach(rec=>{
       const a=assetById(rec.assetId)||{};
       const status=rec.action==='下线'?'已下线':'不予上线';
-      lines.push([rec.assetId,rec.name,status,rec.fromStatus,rec.region,rec.operator||'',rec.time,(a.countries||[]).join('|'),a.category||'',a.provider||'',a.review||'',a.inboundDate||'',a.payType||'',a.genre||'',a.language||'',a.subtitle||''].map(q).join(','));
+      const fromStatus=rec.fromStatus==='已部署'?'已下线':rec.fromStatus;
+      lines.push([rec.assetId,rec.name,status,fromStatus,rec.region,rec.operator||'',rec.time,(a.countries||[]).join('|'),a.category||'',a.provider||'',a.review||'',a.inboundDate||'',a.payType||'',a.genre||'',a.language||'',a.subtitle||''].map(q).join(','));
     });
     const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob);
@@ -1220,18 +1223,13 @@ function renderAuto(){
   // 聚合规则说明
   const legend=`<div class="legend">${I.info}<div><b>自动化聚合规则：</b>基于标准标签（Genre Type / Subgenre / Topic / Element / Feel）聚合，栏目内媒资全部包含同一个 Genre 标签（如「犯罪」）或内容标签（如「大女主复仇」）；当 <b>7 ≤ 单栏目媒资数 ≤ 200</b> 时自动生成待确认栏目，超出 200 上限时按星云平台点击UV / 播放UV（国家 + 播放数据）取播放数据靠前的内容。栏目名自动采用该栏目下所有媒资共同的那个 Genre 标签或内容标签（如「浪漫」「大女主复仇」「丧尸」「LGBT」）。运营手动审核，点击【上线】后系统自动创建媒资包，并在 CMS 自动创建对应栏目。</div></div>`;
 
-  // summary cards
+  // 栏目数量统计仅保留在状态 tab 上（不再重复展示汇总卡片）
   const stCnt=s=>AUTO_COLUMNS.filter(c=>c.region===rg&&c.st===s).length;
-  const cards=`<div class="summary-cards">
-    <div class="scard"><div class="v">${stCnt('待确认')}</div><div class="l">待确认栏目</div></div>
-    <div class="scard"><div class="v">${stCnt('已上线')}</div><div class="l">已上线栏目</div></div>
-    <div class="scard"><div class="v">${stCnt('已忽略')}</div><div class="l">已忽略栏目</div></div>
-  </div>`;
 
   // status tabs
   let statusTabs='<div class="status-tabs">';
-  ['待确认','已上线','已忽略'].forEach(s=>{
-    const dotCls=s==='待确认'?'wait':s==='已上线'?'done':'off';
+  ['待确认','已上线','已忽略','已下线'].forEach(s=>{
+    const dotCls=s==='待确认'?'wait':s==='已上线'?'done':s==='已忽略'?'off':'gray';
     statusTabs+=`<button class="status-tab ${s===state.autoStatus?'active':''}" data-action="autoStatusTab" data-v="${s}"><span class="st-dot ${dotCls}"></span>${s}<span class="scnt">${stCnt(s)}</span></button>`;
   });
   statusTabs+='</div>';
@@ -1264,7 +1262,7 @@ function renderAuto(){
   const {rows,total,pages}=autoRows();
   const head=[];
   if(showBatch)head.push('<th style="width:34px"><input type="checkbox" class="chk" data-action="autoSelAll"></th>');
-  head.push('<th>栏目名称</th><th>命中标签</th><th>媒资数</th><th>生成时间</th><th>状态</th><th style="width:250px">操作</th>');
+  head.push('<th>栏目名称</th><th>分类</th><th>命中标签</th><th>媒资数</th><th>生成时间</th><th>状态</th><th style="width:270px">操作</th>');
   const colspan=head.length;
   let body='';
   if(!rows.length){
@@ -1274,6 +1272,7 @@ function renderAuto(){
       let tds='';
       if(showBatch)tds+=`<td><input type="checkbox" class="chk" data-action="autoSel" data-id="${c.id}" ${state.autoSelected.has(c.id)?'checked':''}></td>`;
       tds+=`<td><span class="colname">${c.tag}</span></td>`;
+      tds+=`<td><span class="ctag">${c.cat}</span></td>`;
       tds+=`<td class="rule-cell">${c.type}：${c.tag}</td>`;
       tds+=`<td><span class="prio">${c.count}</span><div class="cnt-sub">语言匹配：${c.langMatch}<br>字幕语言媒资匹配：${c.subMatch}</div></td>`;
       tds+=`<td>${c.time}</td>`;
@@ -1282,6 +1281,12 @@ function renderAuto(){
       if(c.st==='待确认'){
         ops+=`<button class="op go" data-action="colGo" data-id="${c.id}">${I.go}上线</button>`;
         ops+=`<button class="op off" data-action="colIgnore" data-id="${c.id}">${I.ban}忽略</button>`;
+      }
+      if(c.st==='已上线'){
+        ops+=`<button class="op" data-action="colOff" data-id="${c.id}">${I.down}下线</button>`;
+      }
+      if(c.st==='已忽略'){
+        ops+=`<button class="op" data-action="colRestore" data-id="${c.id}">${I.undo}恢复</button>`;
       }
       tds+=`<td><div class="ops">${ops}</div></td>`;
       body+=`<tr>${tds}</tr>`;
@@ -1298,7 +1303,7 @@ function renderAuto(){
   pg+=`<button class="pg" data-action="autoPg" data-v="${p+1}" ${p>=pages?'disabled':''}>›</button>`;
   const pager=`<div class="pager"><span class="info">共 <b>${total}</b> 条 · 每页 10 条</span><div class="pages">${pg}</div></div>`;
 
-  document.getElementById('content').innerHTML=regionTabs+legend+cards+statusTabs+toolbar+actionbar+`<div class="table-card"><div class="table-wrap"><table><thead><tr>${head.join('')}</tr></thead><tbody>${body}</tbody></table></div>${pager}</div>`;
+  document.getElementById('content').innerHTML=regionTabs+legend+statusTabs+toolbar+actionbar+`<div class="table-card"><div class="table-wrap"><table><thead><tr>${head.join('')}</tr></thead><tbody>${body}</tbody></table></div>${pager}</div>`;
 }
 
 /* ---------- 预览媒资包（待确认栏目详情） ---------- */
@@ -1788,6 +1793,20 @@ document.addEventListener('click',e=>{
     render();return;
   }
   if(a==='colIgnore'){const col=AUTO_COLUMNS.find(c=>c.id===id);col.st='已忽略';state.autoSelected.delete(id);toast('已忽略栏目：'+col.tag,'info');render();return;}
+  if(a==='colOff'){
+    const col=AUTO_COLUMNS.find(c=>c.id===id);
+    openModal(`<div class="warn-ico" style="background:var(--gray-bg);color:var(--text-2)">${I.down}</div><h3>确认下线栏目「${col.tag}」？</h3><p>下线后该栏目将从 CMS 撤下，对应媒资包的媒资保持已部署状态；栏目记录保留在【已下线】中可追溯。</p><div class="actions"><button class="btn" data-action="closeModal">取消</button><button class="btn primary" data-action="confirmColOff" data-id="${id}">确认下线</button></div>`);
+    return;
+  }
+  if(a==='confirmColOff'){
+    const col=AUTO_COLUMNS.find(c=>c.id===id);
+    col.st='已下线';state.autoSelected.delete(id);closeModal();
+    toast('已下线栏目：'+col.tag+'（'+col.region+'），CMS 栏目已撤下','info');render();return;
+  }
+  if(a==='colRestore'){
+    const col=AUTO_COLUMNS.find(c=>c.id===id);
+    col.st='待确认';toast('已恢复栏目：'+col.tag+'，已回到待确认列表');render();return;
+  }
   if(a==='autoBatchGo'){
     const sel=autoColsFor2().filter(c=>state.autoSelected.has(c.id)&&c.st==='待确认');
     if(!sel.length){toast('请先选择待确认栏目','info');return;}
