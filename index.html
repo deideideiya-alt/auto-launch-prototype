@@ -242,7 +242,8 @@
   .icon-btn svg{width:16px;height:16px;}
   .cfg-body{padding:14px 20px 4px;display:flex;flex-direction:column;gap:14px;max-height:420px;overflow-y:auto;}
   .cfg-row{display:flex;align-items:flex-start;gap:14px;}
-  .cfg-cat{width:76px;flex:0 0 76px;font-weight:650;font-size:12.5px;color:var(--text);padding-top:7px;}
+  .cfg-cat{width:118px;flex:0 0 118px;font-weight:650;font-size:12.5px;color:var(--text);padding-top:7px;line-height:1.35;}
+  .cfg-cat small{display:block;font-weight:500;font-size:10px;color:var(--text-3);}
   .cfg-row .ms{flex:1;}
   .cfg-logic{flex:0 0 200px;}
   .seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;}
@@ -518,15 +519,28 @@ const PV_HOPTS={
   review:['安全','敏感']
 };
 const AUTO_MS_MAP={autoLang:'langs',autoSub:'subs',autoReview:'review',autoCat:'cats'};
-/* 自定义配置：参与聚合的标签类别（Genre / Subgenre / Topic / Element / Feel） */
-const CFG_CATS=['Genre','Subgenre','Topic','Element','Feel'];
-/* 标准标签池：[标签, 标签类别]（Genre Type / Subgenre / Topic / Element / Feel） */
+/* 自定义召回条件维度：[维度key, 中文名] */
+const CFG_CATS=[
+  ['GenreType','类型'],
+  ['Subgenre','子类型'],
+  ['Topic','情节主题'],
+  ['Elements','元素/母题'],
+  ['Feel','情绪感受'],
+  ['Audience','观影场景'],
+  ['Occasion','场景/节日'],
+  ['PrimaryAudienceAgeBand','主要观影受众']
+];
+const CFG_CAT_LABEL={};CFG_CATS.forEach(([k,l])=>CFG_CAT_LABEL[k]=l);
+/* 标准标签池：[标签, 维度key] */
 const TAG_POOL=[
-  ['犯罪','Genre'],['浪漫','Genre'],['喜剧','Genre'],['动作','Genre'],['恐怖','Genre'],['科幻','Genre'],['动画','Genre'],['冒险','Genre'],['剧情','Genre'],['奇幻','Genre'],
+  ['犯罪','GenreType'],['浪漫','GenreType'],['喜剧','GenreType'],['动作','GenreType'],['恐怖','GenreType'],['科幻','GenreType'],['动画','GenreType'],['冒险','GenreType'],['剧情','GenreType'],['奇幻','GenreType'],
   ['丧尸','Subgenre'],['赛博朋克','Subgenre'],['宫廷','Subgenre'],['校园','Subgenre'],['末世求生','Subgenre'],['谍战','Subgenre'],
   ['大女主复仇','Topic'],['小人物逆袭','Topic'],['家族恩怨','Topic'],['侦探破案','Topic'],['时间循环','Topic'],
-  ['LGBT','Element'],['双生替身','Element'],['重生逆袭','Element'],
-  ['治愈','Feel'],['高燃','Feel'],['烧脑','Feel'],['甜宠','Feel'],['催泪','Feel']
+  ['LGBT','Elements'],['双生替身','Elements'],['重生逆袭','Elements'],
+  ['治愈','Feel'],['高燃','Feel'],['烧脑','Feel'],['甜宠','Feel'],['催泪','Feel'],
+  ['家庭观影','Audience'],['情侣约会','Audience'],['独自放松','Audience'],['朋友聚会','Audience'],['亲子共赏','Audience'],
+  ['圣诞','Occasion'],['万圣节','Occasion'],['情人节','Occasion'],['新年','Occasion'],['暑期档','Occasion'],['周末休闲','Occasion'],
+  ['全年龄','PrimaryAudienceAgeBand'],['13-17岁','PrimaryAudienceAgeBand'],['18-24岁','PrimaryAudienceAgeBand'],['25-34岁','PrimaryAudienceAgeBand'],['35-44岁','PrimaryAudienceAgeBand'],['45岁以上','PrimaryAudienceAgeBand']
 ];
 /* 自动化栏目池（每日刷新模拟）：每个地区生成若干待确认栏目 */
 const AUTO_COLUMNS=[];
@@ -1197,8 +1211,8 @@ function autoCfgFor(rg){
   return state.autoCfg[rg];
 }
 function defaultCustom(){
-  const o={};CFG_CATS.forEach(c=>o[c]={tags:new Set(),logic:'OR'});
-  o.Genre.tags=new Set(['犯罪','浪漫']);
+  const o={};CFG_CATS.forEach(([k])=>o[k]={tags:new Set(),logic:'OR'});
+  o.GenreType.tags=new Set(['犯罪','浪漫']);
   return o;
 }
 function autoStBadge(st){
@@ -1226,7 +1240,7 @@ function renderAuto(){
   regionTabs+='</div>';
 
   // 聚合规则说明
-  const legend=`<div class="legend">${I.info}<div><b>自动化聚合规则：</b>基于标准标签（Genre Type / Subgenre / Topic / Element / Feel）聚合，栏目内媒资全部包含同一个 Genre 标签（如「犯罪」）或内容标签（如「大女主复仇」）；当 <b>7 ≤ 单栏目媒资数 ≤ 200</b> 时自动生成待确认栏目，超出 200 上限时按星云平台点击UV / 播放UV（国家 + 播放数据）取播放数据靠前的内容。栏目名自动采用该栏目下所有媒资共同的那个 Genre 标签或内容标签（如「浪漫」「大女主复仇」「丧尸」「LGBT」）。运营手动审核，点击【上线】后系统自动创建媒资包，并在 CMS 自动创建对应栏目。</div></div>`;
+  const legend=`<div class="legend">${I.info}<div><b>自动化聚合规则：</b>基于标准标签（GenreType / Subgenre / Topic / Elements / Feel / Audience / Occasion·Festival / PrimaryAudienceAgeBand）聚合，栏目内媒资全部包含同一个维度标签（如「犯罪」「大女主复仇」「家庭观影」）；当 <b>7 ≤ 单栏目媒资数 ≤ 200</b> 时自动生成待确认栏目，超出 200 上限时按星云平台点击UV / 播放UV（国家 + 播放数据）取播放数据靠前的内容。栏目名自动采用该栏目下所有媒资共同的那个标签。召回条件可通过扳手自定义，各条件行之间为「且」。运营手动审核，点击【上线】后系统自动创建媒资包，并在 CMS 自动创建对应栏目。</div></div>`;
 
   // 栏目数量统计仅保留在状态 tab 上（不再重复展示汇总卡片）
   const stCnt=s=>AUTO_COLUMNS.filter(c=>c.region===rg&&c.st===s).length;
@@ -1394,11 +1408,11 @@ function pvRows(col){
 }
 /* 标准化标签：悬浮展示全部标签 */
 function pvTagTipHTML(m){
-  const ks=['Genre','Subgenre','Topic','Element','Feel'];
+  const ks=CFG_CATS.map(([k])=>k);
   return ks.map(k=>{
     const arr=m.tags.filter(t=>t.k===k);
     if(!arr.length)return '';
-    return `<div class="tagtip-row"><span class="tagtip-k">${k}</span><span class="tagtip-v">${arr.map(t=>t.t).join('、')}</span></div>`;
+    return `<div class="tagtip-row"><span class="tagtip-k">${CFG_CAT_LABEL[k]||k}</span><span class="tagtip-v">${arr.map(t=>t.t).join('、')}</span></div>`;
   }).join('');
 }
 /* 表头下拉筛选：可搜索 + 多选 */
@@ -1569,19 +1583,19 @@ function renderPvModal(){
 /* ---------- 自定义配置弹窗（聚合标签 + 且/或组合逻辑） ---------- */
 function openCfgModal(){
   const cur=autoCfgFor(state.autoRegion).custom||defaultCustom();
-  state.cfgSel={};CFG_CATS.forEach(c=>{state.cfgSel[c]={tags:new Set(cur[c].tags),logic:cur[c].logic};});
+  state.cfgSel={};CFG_CATS.forEach(([k])=>{state.cfgSel[k]={tags:new Set(cur[k].tags),logic:cur[k].logic||'OR'};});
   state.openMs=null;
   renderCfgModal();
 }
 function renderCfgModal(){
-  const rows=CFG_CATS.map(cat=>{
+  const rows=CFG_CATS.map(([cat,label])=>{
     const sel=state.cfgSel[cat];
     const tags=TAG_POOL.filter(t=>t[1]===cat).map(t=>t[0]);
     const chips=[...sel.tags].map(t=>`<span class="ptag">${t}<b class="ptag-x" data-action="cfgTagX" data-cat="${cat}" data-tag="${t}">×</b></span>`).join('');
     const opts=tags.map(t=>`<label class="ms-opt"><input type="checkbox" data-action="cfgTag" data-cat="${cat}" value="${t}" ${sel.tags.has(t)?'checked':''}>${t}</label>`).join('');
     const open=state.openMs==='cfg'+cat?'open':'';
     return `<div class="cfg-row">
-      <label class="cfg-cat">${cat}</label>
+      <label class="cfg-cat">${label}<small>${cat}</small></label>
       <div class="ms ${open}" data-mskey="cfg${cat}">
         <div class="play-tags">${chips||'<span class="ph">请选择标签</span>'}<b class="ptag-add" data-action="msToggle" data-mskey="cfg${cat}">▾</b></div>
         <div class="ms-panel">${opts}</div>
@@ -1591,15 +1605,15 @@ function renderCfgModal(){
           <button class="seg-btn ${sel.logic==='OR'?'active':''}" data-action="cfgLogic" data-cat="${cat}" data-v="OR">或 (OR)</button>
           <button class="seg-btn ${sel.logic==='AND'?'active':''}" data-action="cfgLogic" data-cat="${cat}" data-v="AND">且 (AND)</button>
         </div>
-        <div class="cfg-hint">${sel.logic==='OR'?'命中任一所选标签即满足条件':'需包含全部所选标签才满足条件'}</div>
+        <div class="cfg-hint">${sel.logic==='OR'?'命中任一所选标签即满足该行条件':'需包含全部所选标签才满足该行条件'}</div>
       </div>
     </div>`;
   }).join('');
   const m=document.getElementById('modal');m.className='modal wide';
   m.innerHTML=`<div class="am-head"><h3>自定义配置</h3><button class="am-close" data-action="closeModal" title="关闭">✕</button></div>
-  <div class="legend" style="margin:10px 20px 0;">${I.info}<div>按标签类别（Genre / Subgenre / Topic / Element / Feel）选择参与自动聚合的标签，并为每个类别选择【且】或【或】的组合逻辑；保存后次日栏目池刷新生效。</div></div>
+  <div class="legend" style="margin:10px 20px 0;">${I.info}<div>按 8 个召回条件维度（类型 GenreType / 子类型 Subgenre / 情节主题 Topic / 元素母题 Elements / 情绪感受 Feel / 观影场景 Audience / 场景节日 Occasion·Festival / 主要观影受众 PrimaryAudienceAgeBand）选择参与召回的标签；每行维度内支持<b>【或】【且】</b>逻辑切换（默认预填充<b>或</b>），<b>各召回条件行之间为「且」的关系</b>。保存后次日栏目池刷新生效。</div></div>
   <div class="cfg-body">${rows}</div>
-  <div class="am-foot"><span>组合逻辑可按类别独立设置</span><div class="am-foot-btns"><button class="btn" data-action="cfgReset">重 置</button><button class="btn primary" data-action="cfgSave">保存配置</button></div></div>`;
+  <div class="am-foot"><span>同一行内可切换 且/或，行与行之间为「且」</span><div class="am-foot-btns"><button class="btn" data-action="cfgReset">重 置</button><button class="btn primary" data-action="cfgSave">保存配置</button></div></div>`;
   document.getElementById('overlay').classList.add('open');
 }
 
