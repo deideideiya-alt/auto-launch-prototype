@@ -454,7 +454,7 @@
   .pcard .pname{font-size:12px;font-weight:600;color:var(--text-1);padding:7px 10px 1px;}
   .pcard .psc{font-size:11px;color:var(--text-3);padding:0 10px 9px;display:flex;align-items:center;}
   .pcard .psc .dot{width:7px;height:7px;margin-right:5px;}
-  .mname.lk{cursor:pointer;}
+  .mname.lk{color:var(--blue);cursor:pointer;}
   .mname.lk:hover{text-decoration:underline;}
 </style>
 </head>
@@ -647,7 +647,7 @@ const state={
   autoRegion:'US',autoStatus:'待确认',autoPage:1,autoSelected:new Set(),autoCfg:{},
   pvCol:null,pvPage:1,pvSize:10,pvF:{title:'',id:''},pvTab:'recall',
   pvH:{provider:new Set(),review:new Set(),countries:new Set(),deploy:new Set(),langs:new Set(),subs:new Set()},
-  pvHopen:null,pvHq:{},pvHFocus:false,pvPopPos:{left:0,top:0},detail:null,
+  pvHopen:null,pvHq:{},pvHFocus:false,pvPopPos:{left:0,top:0},detail:null,detailFrom:null,
   pvSel:new Set(),pvRemoved:{},pvAdded:{},
   pvAddOpen:false,pvAddSel:new Set(),pvAddF:{title:'',provider:'',review:''},
   cfgSel:null
@@ -829,7 +829,7 @@ function cellHTML(k,a,row){
   switch(k){
     case 'id':{
       const vid=a.videoId||a.id;
-      return `<div class="mname">${a.name}</div><div class="mid">VideoID:${vid}</div>`+(a.bundleId?`<div class="mid">BundleID:${a.bundleId}</div>`:'');
+      return `<div class="mname lk" data-action="assetDetail" data-id="${a.id}" title="查看媒资详情">${a.name}</div><div class="mid">VideoID:${vid}</div>`+(a.bundleId?`<div class="mid">BundleID:${a.bundleId}</div>`:'');
     }
     case 'status':return badge(row.status);
     case 'countries':return `<div class="countries">${a.countries.map(c=>`<span class="ctag ${c===r?'cur':''}">${c}</span>`).join('')}</div>`;
@@ -928,7 +928,7 @@ function recCellHTML(k,rec){
   switch(k){
     case 'id':{
       const _a=assetById(rec.assetId)||{};
-      return `<div class="mname">${rec.name}</div><div class="mid">VideoID:${_a.videoId||rec.assetId}</div>`+(_a.bundleId?`<div class="mid">BundleID:${_a.bundleId}</div>`:'');
+      return `<div class="mname lk" data-action="assetDetail" data-id="${rec.assetId}" title="查看媒资详情">${rec.name}</div><div class="mid">VideoID:${_a.videoId||rec.assetId}</div>`+(_a.bundleId?`<div class="mid">BundleID:${_a.bundleId}</div>`:'');
     }
     case 'status':return badge('已下线');
     case 'fromStatus':return badge(rec.fromStatus==='已部署'?'已下线':rec.fromStatus);
@@ -1232,10 +1232,10 @@ function renderAuto(){
   const cfg=autoCfgFor(rg);
   document.getElementById('topTabs').style.display='none';
 
-  // country tabs（自动化栏目池分区）
-  let regionTabs='<div class="section-label">自动化栏目池 · 按国家 / 地区分区（栏目池每日自动刷新，最近刷新：今日 06:00）</div><div class="region-tabs">';
-  REGIONS.forEach(r=>{
-    regionTabs+=`<button class="region-tab ${r===rg?'active':''}" data-action="autoRegionTab" data-v="${r}">${r}</button>`;
+  // country tabs（自动化栏目池分区，可拖动排序，顺序按 OA 账号持久化）
+  let regionTabs='<div class="section-label">自动化栏目池 · 按国家 / 地区分区（栏目池每日自动刷新，最近刷新：今日 06:00，拖动 tab 可调整顺序）</div><div class="region-tabs">';
+  getRegionOrder().forEach(r=>{
+    regionTabs+=`<button class="region-tab draggable ${r===rg?'active':''}" draggable="true" data-action="autoRegionTab" data-v="${r}" data-rg="${r}">${r}</button>`;
   });
   regionTabs+='</div>';
 
@@ -1792,12 +1792,24 @@ document.addEventListener('click',e=>{
   }
   if(a==='pvHClose'){state.pvHopen=null;renderPvPop();return;}
   if(a==='pvDetail'){
-    state.detail=id;state.pvHopen=null;state.pvHFocus=false;
+    state.detail=id;state.detailFrom='pv';state.pvHopen=null;state.pvHFocus=false;
     const pp=document.getElementById('pvPop');if(pp)pp.remove();
     const tt=document.getElementById('tagTip');if(tt)tt.style.display='none';
     closeModal();render();return;
   }
-  if(a==='dtBack'){state.detail=null;render();renderPvModal();return;}
+  if(a==='assetDetail'){
+    state.detail=id;state.detailFrom='asset';
+    const pp=document.getElementById('pvPop');if(pp)pp.remove();
+    const tt=document.getElementById('tagTip');if(tt)tt.style.display='none';
+    render();return;
+  }
+  if(a==='dtBack'){
+    const from=state.detailFrom;
+    state.detail=null;state.detailFrom=null;
+    render();
+    if(from==='pv')renderPvModal();
+    return;
+  }
   if(a==='dtCopy'){
     const url=decodeURIComponent(el.dataset.u||'');
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(url):Promise.reject()).then(()=>toast('播放地址已复制到剪贴板')).catch(()=>toast('已生成播放地址（原型环境不支持剪贴板）','info'));
@@ -2040,9 +2052,25 @@ function dtSection(title,pairs,extraHTML){
   const body=pairs&&pairs.length?`<div class="dt-grid">${pairs.map(kvHTML).join('')}</div>`:'';
   return `<div class="dt-block"><div class="dt-bar">${title}</div><div class="dt-body">${body}${extraHTML||''}</div></div>`;
 }
+/* 上新工作台媒资 → 详情页数据映射 */
+function assetDetailM(a){
+  const r2=mulberry32(pvSeed(a.id||a.videoId||'asset'));
+  const split=s=>String(s||'').split(/[,，、]/).map(x=>x.trim()).filter(Boolean);
+  return {
+    vid:a.videoId||a.id,bundleId:a.bundleId||'',name:a.name||'',
+    cat:a.category||'Movies',provider:a.provider||'Plex AVOD',
+    langs:split(a.language||'英语'),subs:split(a.subtitle||'无').filter(x=>x!=='无'),
+    countries:a.countries||[],deploy:'已部署',
+    review:a.review||'安全',risk:a.risk&&a.risk!=='无'?a.risk:'',
+    time:a.inboundDate||'',hue:Math.floor(r2()*360),
+    tags:[a.genre?{t:a.genre,k:'GenreType'}:null,a.category?{t:a.category,k:'Subgenre'}:null].filter(Boolean)
+  };
+}
 function renderDetail(){
-  const col=AUTO_COLUMNS.find(c=>c.id===state.pvCol);
-  const m=pvPackRows(col||{id:'',region:'',tag:'',type:'',count:0}).find(x=>x.vid===state.detail)||pvAllRows(col||{id:'',region:'',tag:'',type:'',count:0})[0];
+  const col=state.detailFrom==='asset'?null:AUTO_COLUMNS.find(c=>c.id===state.pvCol);
+  const m=state.detailFrom==='asset'
+    ? assetDetailM(assetById(state.detail)||{})
+    : (pvPackRows(col||{id:'',region:'',tag:'',type:'',count:0}).find(x=>x.vid===state.detail)||pvAllRows(col||{id:'',region:'',tag:'',type:'',count:0})[0]);
   const d=dtData(m,col);
   const emptyBox=(txt,ico)=>`<div class="dt-empty">${ico}${txt}</div>`;
   const postersHTML=`<div class="dot-legend"><span><span class="dot" style="background:#9b59f7"></span>默认海报</span><span><span class="dot" style="background:#4f6ef7"></span>标题海报</span><span><span class="dot" style="background:#2ecc71"></span>上架海报</span><span><span class="dot" style="background:#e74c3c"></span>高焦海报</span></div>
